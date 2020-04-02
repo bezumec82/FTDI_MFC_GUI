@@ -75,6 +75,7 @@ private: /*--- Read from device ---*/
 	CEdit m_eBoxSaveFPth;
 	CFile m_saveFile;
 	CString m_saveFPth;
+	CEdit m_eBoxSaveState;
 	::std::atomic_bool m_saveState{ false };
 	::std::future<void> m_saveFuture;
 

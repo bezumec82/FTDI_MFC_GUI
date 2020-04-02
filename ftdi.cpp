@@ -129,6 +129,7 @@ void FtdiHandler::setSelDev(::std::string desc)
 
 int32_t FtdiHandler::openDevice()
 {
+    
     if (!m_num_devs)
     {
         ::std::cerr << "No devices in the system" << ::std::endl;
@@ -141,7 +142,8 @@ int32_t FtdiHandler::openDevice()
     }
     if (isLocked())
     {
-        ::std::cerr << "Device already opened" << ::std::endl;
+        m_devRefCntr++;
+        ::std::cout << "Device already opened" << ::std::endl;
         return 0;
     }
 
@@ -182,6 +184,13 @@ void FtdiHandler::closeDevice()
         ::std::cout << "No devices in the system" << ::std::endl;
         return;
     }
+    if (m_devRefCntr != 0)
+    {
+        m_devRefCntr--;
+        ::std::cout << "Device stil in use" << ::std::endl;
+        return;
+    }
+
     try
     {
         FT_DEVICE_LIST_INFO_NODE node = m_devDescriptionMap.at(m_selDevDescription);

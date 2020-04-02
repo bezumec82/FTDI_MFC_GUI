@@ -36,6 +36,7 @@ void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_PERIOD4, oneLine4.m_eBoxSendPeriod);
 
 	DDX_Control(pDX, IDC_EBOX_SAVE_FILE, m_eBoxSaveFPth);
+	DDX_Control(pDX, IDC_EBOX_SAVE_STATE, m_eBoxSaveState);
 }
 
 void CMFCDlg::OnBnClickedScan()
@@ -132,9 +133,7 @@ void CMFCDlg::OnBnClickedSave()
 	{
 		m_saveFPth = dlgFile.GetPathName();
 		m_eBoxSaveFPth.SetWindowTextW(m_saveFPth);
-
 	}
-
 }
 
 #define SAVE_PERIOD_MS 100
@@ -145,7 +144,6 @@ void CMFCDlg::OnBnClickedStartSave()
 	//handle stop
 	if (m_saveState.load()) //reading/saving in process
 	{
-
 		m_saveState.store(false);
 		return;
 	}
@@ -157,7 +155,7 @@ void CMFCDlg::OnBnClickedStartSave()
 		return;
 	}
 	if (!m_saveFile.Open(m_saveFPth,
-		CFile::modeWrite | CFile::modeCreate | CFile::shareExclusive, &ex))
+		CFile::modeWrite | CFile::modeCreate | CFile::shareDenyWrite, &ex))
 	{
 		TCHAR szCause[255] = { 0 };
 		ex.GetErrorMessage(szCause, sizeof(szCause)/2 - 1);
@@ -174,11 +172,15 @@ void CMFCDlg::OnBnClickedStartSave()
 		//try to open device
 		if (m_ftdiHandler.openDevice() == 0)
 		{
-			::std::cout << "Start reding data from the device "
+			::std::cout << "Start reading data from the device "
 						<< m_ftdiHandler.getSelDev() << ::std::endl;
 			m_saveState.store(true);
+			m_eBoxSaveState.SetWindowTextW(L"saving");
 		}
-
+		else
+		{
+			m_ftdiHandler.closeDevice(); //try to fix situation
+		}
 		while (m_saveState.load())
 		{
 			::std::vector<char> buffer;
@@ -187,14 +189,13 @@ void CMFCDlg::OnBnClickedStartSave()
 			m_saveFile.Flush();
 			::std::this_thread::sleep_for(::std::chrono::milliseconds(SAVE_PERIOD_MS));
 		}
-
+		m_eBoxSaveState.SetWindowTextW(L"stopped");
+		m_ftdiHandler.closeDevice();
 		m_saveFile.Close();
 		::std::cout << "Data saving is stopped" << ::std::endl;
 	};
 
 	m_saveFuture = ::std::async(std::launch::async, work);
-
-
 }
 
 

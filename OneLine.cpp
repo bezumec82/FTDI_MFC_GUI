@@ -121,7 +121,11 @@ void OneLine::StartStopHndlr()
 
 	auto work = [&]() mutable {
 		//try to open device
-		if (m_ftdiHandler_ref.openDevice() != 0) return;
+		if (m_ftdiHandler_ref.openDevice() != 0)
+		{
+			m_ftdiHandler_ref.closeDevice(); //try to fix situation
+			return;
+		}
 		::std::cout << "Start sending data to the device "
 			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
 		m_sendState.store(true);

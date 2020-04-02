@@ -16,11 +16,6 @@ CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-
-
-
-// CMFCDlg message handlers
-
 BOOL CMFCDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
@@ -30,17 +25,20 @@ BOOL CMFCDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-#if(0)
+#if(1)
 	//Initialize captions
-	m_eBoxSendState1.SetWindowTextW(L"stopped");
-	m_eBoxSendState2.SetWindowTextW(L"stopped");
-	m_eBoxSendState3.SetWindowTextW(L"stopped");
-	m_eBoxSendState4.SetWindowTextW(L"stopped");
+	oneLine1.m_eBoxSendState.SetWindowTextW(L"stopped");
+	oneLine2.m_eBoxSendState.SetWindowTextW(L"stopped");
+	oneLine3.m_eBoxSendState.SetWindowTextW(L"stopped");
+	oneLine4.m_eBoxSendState.SetWindowTextW(L"stopped");
 
-	m_eBoxOpenedFPth1.SetWindowTextW(L"<-select file");
-	m_eBoxOpenedFPth2.SetWindowTextW(L"<-select file");
-	m_eBoxOpenedFPth3.SetWindowTextW(L"<-select file");
-	m_eBoxOpenedFPth4.SetWindowTextW(L"<-select file");
+	oneLine1.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+	oneLine2.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+	oneLine3.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+	oneLine4.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+
+	m_eBoxSaveState.SetWindowTextW(L"stopped");
+
 #endif
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }

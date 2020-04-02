@@ -78,6 +78,8 @@ namespace FTDI
         ::std::atomic_bool m_deviceIsLocked{false};
         ::std::mutex m_sendMtx;
 
+        uint32_t m_devRefCntr{ 0 };
+
     };
 } //end namespace
 
