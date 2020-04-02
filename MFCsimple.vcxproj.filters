@@ -45,6 +45,9 @@
     <ClInclude Include="OneLine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TimeStat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -69,6 +72,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OneLine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TimeStat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

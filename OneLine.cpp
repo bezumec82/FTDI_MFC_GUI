@@ -59,14 +59,6 @@ int32_t OneLine::readFile()
 
 }
 
-void OneLine::toggleStateBox()
-{
-	if (m_sendState.load())
-		m_eBoxSendState.SetWindowTextW(L"sending");
-	else
-		m_eBoxSendState.SetWindowTextW(L"stopped");
-}
-
 /*----------------*/
 /*--- Handlers ---*/
 /*----------------*/
@@ -96,6 +88,7 @@ void OneLine::StartStopHndlr()
 	{
 		::std::cerr << "Period isn't set.\n"
 					<< "Can't start sending." << ::std::endl;
+		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 		return;
 	}
 
@@ -103,6 +96,7 @@ void OneLine::StartStopHndlr()
 	{
 		::std::cerr << "No data to send.\n"
 					<< "Can't start sending." << ::std::endl;
+		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 		return;
 	}
 	
@@ -112,10 +106,12 @@ void OneLine::StartStopHndlr()
 		if (m_ftdiHandler_ref.openDevice() != 0)
 		{
 			m_ftdiHandler_ref.closeDevice();
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 			return;
 		}
 		m_ftdiHandler_ref.sendData(m_fileDataBuf);
 		m_ftdiHandler_ref.closeDevice();
+		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 		return;
 	}
 
@@ -124,20 +120,20 @@ void OneLine::StartStopHndlr()
 		if (m_ftdiHandler_ref.openDevice() != 0)
 		{
 			m_ftdiHandler_ref.closeDevice(); //try to fix situation
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 			return;
 		}
 		::std::cout << "Start sending data to the device "
 			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
 		m_sendState.store(true);
-		toggleStateBox();
 		while (m_sendState.load() == true)
 		{
 			m_ftdiHandler_ref.sendData(m_fileDataBuf);
 			::std::this_thread::sleep_for(::std::chrono::milliseconds(m_period));
 		}
 		m_ftdiHandler_ref.closeDevice();
+		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 		::std::cout << "Data sending is stopped" << ::std::endl;
-		toggleStateBox();
 	};
 #if(1)
 	m_future = ::std::async(std::launch::async, work);

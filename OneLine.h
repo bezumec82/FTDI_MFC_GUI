@@ -13,7 +13,7 @@
 class OneLine
 {
 public:
-	OneLine(::FTDI::FtdiHandler& ftdiHandler)
+	OneLine(FTDI::FtdiHandler& ftdiHandler)
 		: m_ftdiHandler_ref{ ftdiHandler }
 	{
 		//m_eBoxSendState.SetWindowTextW(L"stopped");
@@ -22,8 +22,8 @@ public:
 
 	/*--- GUI ---*/
 	CEdit m_eBoxOpenedFPth;
-	CEdit m_eBoxSendState;
 	CEdit m_eBoxSendPeriod;
+	CButton m_chBoxStartStop;
 
 private:
 	::FTDI::FtdiHandler& m_ftdiHandler_ref;
@@ -47,6 +47,5 @@ public:
 private: /*--- Utility ---*/
 	void getPeriod();
 	int32_t readFile();
-	void toggleStateBox();
 };
 

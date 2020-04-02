@@ -5,44 +5,47 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 
-	ON_BN_CLICKED(IDSCAN, &CMFCDlg::OnBnClickedScan)
-	ON_CBN_SELCHANGE(IDC_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
+	ON_BN_CLICKED(ID_BT_SCAN, &CMFCDlg::OnBnClickedScan)
+	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
 
-	ON_COMMAND_RANGE(IDOPEN1, IDOPEN4, openDispatch)
-	ON_COMMAND_RANGE(IDSTARTSTOP1, IDSTARTSTOP4, startStopDispatch)
+	ON_COMMAND_RANGE(
+		ID_BT_OPEN_1, ID_BT_OPEN_20, 
+		openDispatch)
+	ON_COMMAND_RANGE(
+		IDC_CHBOX_START_STOP_1, IDC_CHBOX_START_STOP_20, 
+		startStopDispatch)
 
-	ON_BN_CLICKED(IDSAVE, &CMFCDlg::OnBnClickedSave)
-	ON_BN_CLICKED(IDSTARTSTOPSAVE, &CMFCDlg::OnBnClickedStartSave)
+	ON_BN_CLICKED(ID_BT_SAVE, &CMFCDlg::OnBnClickedSave)
+	ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE, 
+		&CMFCDlg::OnChBoxStartStopSave)
+	//ON_BN_CLICKED(IDC_CHECK_IMM_SAVE, &CMFCDlg::OnCheckedImmSave)
 END_MESSAGE_MAP()
 
 void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_COMBO, m_cBoxDevices);
+	DDX_Control(pDX, IDC_SCAN_COMBO, m_cBoxDevices);
 
-	DDX_Control(pDX, IDC_EBOX_FILE1, oneLine1.m_eBoxOpenedFPth);
-	DDX_Control(pDX, IDC_EBOX_FILE2, oneLine2.m_eBoxOpenedFPth);
-	DDX_Control(pDX, IDC_EBOX_FILE3, oneLine3.m_eBoxOpenedFPth);
-	DDX_Control(pDX, IDC_EBOX_FILE4, oneLine4.m_eBoxOpenedFPth);
-
-	DDX_Control(pDX, IDC_EBOX_STATE1, oneLine1.m_eBoxSendState);
-	DDX_Control(pDX, IDC_EBOX_STATE2, oneLine2.m_eBoxSendState);
-	DDX_Control(pDX, IDC_EBOX_STATE3, oneLine3.m_eBoxSendState);
-	DDX_Control(pDX, IDC_EBOX_STATE4, oneLine4.m_eBoxSendState);
-
-	DDX_Control(pDX, IDC_PERIOD1, oneLine1.m_eBoxSendPeriod);
-	DDX_Control(pDX, IDC_PERIOD2, oneLine2.m_eBoxSendPeriod);
-	DDX_Control(pDX, IDC_PERIOD3, oneLine3.m_eBoxSendPeriod);
-	DDX_Control(pDX, IDC_PERIOD4, oneLine4.m_eBoxSendPeriod);
+	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
+	{
+		DDX_Control(pDX, IDC_EBOX_FILE_1 + idx, 
+			(*m_oneLine_uptr_arr[idx]).m_eBoxOpenedFPth);
+		DDX_Control(pDX, IDC_EBOX_PERIOD_1 + idx, 
+			(*m_oneLine_uptr_arr[idx]).m_eBoxSendPeriod);
+		DDX_Control(pDX, IDC_CHBOX_START_STOP_1 + idx, 
+			(*m_oneLine_uptr_arr[idx]).m_chBoxStartStop);
+	}
 
 	DDX_Control(pDX, IDC_EBOX_SAVE_FILE, m_eBoxSaveFPth);
-	DDX_Control(pDX, IDC_EBOX_SAVE_STATE, m_eBoxSaveState);
+	DDX_Control(pDX, IDC_CHBOX_START_STOP_SAVE, m_chBoxStartStopSave);
+	DDX_Control(pDX, IDC_EBOX_IMM_RX_RATE, m_eBoxImmRXrate);
+	DDX_Control(pDX, IDC_EBOX_MED_RX_RATE, m_eBoxMedRXrate);
 }
 
 void CMFCDlg::OnBnClickedScan()
 {
-	m_ftdiHandler.findFTDIDevices();
-	m_ftdiHandler.printFTDIDevices();
+	if (!m_ftdiHandler.findFTDIDevices())
+		m_ftdiHandler.printFTDIDevices();
 	//fill combo box
 	m_cBoxDevices.ResetContent();
 	const ::FTDI::DevDescriptions& dev_descs = m_ftdiHandler.getDevDescriptions();
@@ -62,67 +65,29 @@ void CMFCDlg::OnCbnSelchangeCombo()
 
 void CMFCDlg::openDispatch(UINT nID)
 {
-	switch (nID)
+	if (nID <= ID_BT_OPEN_20)
 	{
-	case IDOPEN1:
-	{
-		::std::cout << "Open1 pressed" << ::std::endl;
-		oneLine1.OpenHndlr();
-		break;
+		uint8_t idx = nID - ID_BT_OPEN_1;
+		::std::cout << "Open" << (idx + 1) << " is pressed" << ::std::endl;
+		(*m_oneLine_uptr_arr[idx]).OpenHndlr();
 	}
-	case IDOPEN2:
+	else
 	{
-		::std::cout << "Open2 pressed" << ::std::endl;
-		oneLine2.OpenHndlr();
-		break;
-	}
-	case IDOPEN3:
-	{
-		::std::cout << "Open3 pressed" << ::std::endl;
-		oneLine3.OpenHndlr();
-		break;
-	}
-	case IDOPEN4:
-	{
-		::std::cout << "Open4 pressed" << ::std::endl;
-		oneLine4.OpenHndlr();
-		break;
-	}
-	default:
-		::std::cerr << "Error : unhandled code : " << nID << ::std::endl;
+		::std::cerr << "Unknown event code : " << nID << ::std::endl;
 	}
 }
 
 void CMFCDlg::startStopDispatch(UINT nID)
 {
-	switch (nID)
+	if (nID <= IDC_CHBOX_START_STOP_20)
 	{
-	case IDSTARTSTOP1:
-	{
-		::std::cout << "Start/Stop1 pressed" << ::std::endl;
-		oneLine1.StartStopHndlr();
-		break;
+		uint8_t idx = nID - IDC_CHBOX_START_STOP_1;
+		::std::cout << "Start/stop" << (idx + 1) << " is pressed" << ::std::endl;
+		( * m_oneLine_uptr_arr[idx]).StartStopHndlr();
 	}
-	case IDSTARTSTOP2:
+	else
 	{
-		::std::cout << "Start/Stop2 pressed" << ::std::endl;
-		oneLine2.StartStopHndlr();
-		break;
-	}
-	case IDSTARTSTOP3:
-	{
-		::std::cout << "Start/Stop3 pressed" << ::std::endl;
-		oneLine3.StartStopHndlr();
-		break;
-	}
-	case IDSTARTSTOP4:
-	{
-		::std::cout << "Start/Stop4 pressed" << ::std::endl;
-		oneLine4.StartStopHndlr();
-		break;
-	}
-	default:
-		::std::cerr << "Error : unhandled code : " << nID << ::std::endl;
+		::std::cerr << "Unknown event code : " << nID << ::std::endl;
 	}
 }
 
@@ -136,8 +101,13 @@ void CMFCDlg::OnBnClickedSave()
 	}
 }
 
+//void CMFCDlg::OnCheckedImmSave()
+//{
+//	m_saveImmediately.store(!m_saveImmediately.load());
+//}
+
 #define SAVE_PERIOD_MS 100
-void CMFCDlg::OnBnClickedStartSave()
+void CMFCDlg::OnChBoxStartStopSave()
 {
 	CFileException ex;
 
@@ -145,6 +115,7 @@ void CMFCDlg::OnBnClickedStartSave()
 	if (m_saveState.load()) //reading/saving in process
 	{
 		m_saveState.store(false);
+		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
 		return;
 	}
 
@@ -152,10 +123,13 @@ void CMFCDlg::OnBnClickedStartSave()
 	if ( m_saveFPth.IsEmpty() )
 	{
 		::std::cerr << "File to save is not set" << ::std::endl;
+		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
 		return;
 	}
 	if (!m_saveFile.Open(m_saveFPth,
-		CFile::modeWrite | CFile::modeCreate | CFile::shareDenyWrite, &ex))
+		CFile::modeWrite 
+		| CFile::modeCreate 
+		| CFile::shareDenyWrite, &ex))
 	{
 		TCHAR szCause[255] = { 0 };
 		ex.GetErrorMessage(szCause, sizeof(szCause)/2 - 1);
@@ -163,19 +137,22 @@ void CMFCDlg::OnBnClickedStartSave()
 			<< utf16ToUtf8(m_saveFPth.GetString()) << '\n'
 			<< "Error : " << utf16ToUtf8(szCause)
 			<< ::std::endl;
+		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
 		return;
 	}
 
 	//reading to the file
 	auto work = [&]() mutable
 	{
+		TimeStat time_stat;
 		//try to open device
 		if (m_ftdiHandler.openDevice() == 0)
 		{
 			::std::cout << "Start reading data from the device "
 						<< m_ftdiHandler.getSelDev() << ::std::endl;
 			m_saveState.store(true);
-			m_eBoxSaveState.SetWindowTextW(L"saving");
+			m_ftdiHandler.clearRxBuf();
+			time_stat.start();
 		}
 		else
 		{
@@ -184,14 +161,28 @@ void CMFCDlg::OnBnClickedStartSave()
 		while (m_saveState.load())
 		{
 			::std::vector<char> buffer;
-			m_ftdiHandler.recvData(buffer);
+			if( m_ftdiHandler.recvData(buffer) != 0)
+				break;
 			m_saveFile.Write(buffer.data(), buffer.size());
-			m_saveFile.Flush();
-			::std::this_thread::sleep_for(::std::chrono::milliseconds(SAVE_PERIOD_MS));
+			//if(m_saveImmediately.load())
+				m_saveFile.Flush();
+
+			m_eBoxImmRXrate.SetWindowTextW( \
+				time_stat.getImmRXrate(buffer.size()));
+			m_eBoxMedRXrate.SetWindowTextW( \
+				time_stat.getMedRXrate(buffer.size()));
+
+			::std::this_thread::sleep_for( \
+				::std::chrono::milliseconds(SAVE_PERIOD_MS));
 		}
-		m_eBoxSaveState.SetWindowTextW(L"stopped");
+		m_eBoxImmRXrate.SetWindowTextW(L"0.0");
 		m_ftdiHandler.closeDevice();
+
+		time_stat.stop();
+
+		m_saveFile.Flush();
 		m_saveFile.Close();
+		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
 		::std::cout << "Data saving is stopped" << ::std::endl;
 	};
 

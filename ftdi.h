@@ -16,6 +16,7 @@
 #include <windows.h>
 #include <ftd2xx.h>
 
+#define RX_TIMEOUT_MS 100
 
 namespace FTDI
 {
@@ -36,7 +37,7 @@ namespace FTDI
             m_num_devs{ 0 }
         { }
 
-        void findFTDIDevices();
+        int32_t findFTDIDevices();
         void printFTDIDevices();
 #if(0)
         void fillComboBox(CComboBox&);
@@ -44,8 +45,8 @@ namespace FTDI
         int32_t openDevice();
         void closeDevice();
         void sendData(::std::vector<char>&);
-        void recvData(::std::vector<char>&);
-
+        int32_t recvData(::std::vector<char>&);
+        void clearRxBuf();
     public: /*--- Setters/Getters ---*/
         const DevDescription& getSelDev() const
         {

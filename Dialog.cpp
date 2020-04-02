@@ -7,12 +7,12 @@
 
 
 CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent),
-	oneLine1(m_ftdiHandler),
-	oneLine2(m_ftdiHandler),
-	oneLine3(m_ftdiHandler),
-	oneLine4(m_ftdiHandler)
+	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent)
 {
+	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
+	{
+		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);
+	}
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -25,21 +25,15 @@ BOOL CMFCDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-#if(1)
 	//Initialize captions
-	oneLine1.m_eBoxSendState.SetWindowTextW(L"stopped");
-	oneLine2.m_eBoxSendState.SetWindowTextW(L"stopped");
-	oneLine3.m_eBoxSendState.SetWindowTextW(L"stopped");
-	oneLine4.m_eBoxSendState.SetWindowTextW(L"stopped");
 
-	oneLine1.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
-	oneLine2.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
-	oneLine3.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
-	oneLine4.m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
+	{
+		(* m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+	}
+	m_eBoxImmRXrate.SetWindowTextW(L"0.0");
+	m_eBoxMedRXrate.SetWindowTextW(L"0.0");
 
-	m_eBoxSaveState.SetWindowTextW(L"stopped");
-
-#endif
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 

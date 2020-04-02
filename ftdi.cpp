@@ -3,13 +3,13 @@
 
 using namespace FTDI;
 
-void FtdiHandler::findFTDIDevices()
+int32_t FtdiHandler::findFTDIDevices()
 {
     if (isLocked()) 
     {
         ::std::cerr << "Can't start looking for another device."
                     << "Work in process." << ::std::endl;
-        return;
+        return -1;
     }
     ::std::cout << "Looking for the FTDI devices" << ::std::endl;
 
@@ -24,7 +24,7 @@ void FtdiHandler::findFTDIDevices()
     if (m_num_devs == 0)
     {
         ::std::cout << "No FTDI devices in the system" << ::std::endl;
-        return;
+        return -1;
     }
     m_dev_list_uptr.swap( ::std::make_unique<FT_DEVICE_LIST_INFO_NODE[]>(m_num_devs) );
 
@@ -53,6 +53,7 @@ void FtdiHandler::findFTDIDevices()
 
         }
     }
+    return 0;
 }
 
 void FtdiHandler::printFTDIDevices()
@@ -166,6 +167,13 @@ int32_t FtdiHandler::openDevice()
             m_devDescriptionMap.at(m_selDevDescription) = node; //rewrite back acquired handle
             m_selDevHandle = node.ftHandle;
             ::std::cout << "Opened device : " << m_selDevDescription << ::std::endl;
+            m_ft_status = FT_SetTimeouts(m_selDevHandle, RX_TIMEOUT_MS, 0);
+            if (m_ft_status != FT_OK)
+            {
+                ::std::cout << "Can't set RX timeout : " << m_selDevDescription << '\n'
+                            << "Error : " << m_ft_status << ::std::endl;
+                return -1;
+            }
             return 0;
         }
     }
@@ -254,14 +262,26 @@ void FtdiHandler::sendData(::std::vector<char>& data)
 
 }
 
-void FtdiHandler::recvData(::std::vector<char>& buffer)
+int32_t FtdiHandler::recvData(::std::vector<char>& buffer)
 {
     DWORD EventDWord;
     DWORD TxBytes; DWORD RxBytes;
     DWORD BytesReceived;
 
+    if (!m_num_devs)
+    {
+        ::std::cout << "No devices in the system" << ::std::endl;
+        return -1;
+    }
+    if (m_selDevHandle == nullptr)
+    {
+        ::std::cerr << "Device isn't opened" << ::std::endl;
+        return -1;
+    }
+
     m_ft_status = FT_GetStatus(m_selDevHandle, &RxBytes, &TxBytes, &EventDWord);
-    if (RxBytes <= 0) return;
+    if (RxBytes <= 0)
+        return 0;
 
     buffer.resize(RxBytes);
     m_ft_status = FT_Read(m_selDevHandle, buffer.data(), buffer.size(), &BytesReceived);
@@ -269,13 +289,24 @@ void FtdiHandler::recvData(::std::vector<char>& buffer)
     {
         ::std::cerr << "Can't read data from the device " << m_selDevDescription << '\n'
                     << "Error : " << m_ft_status << ::std::endl;
+        return -1;
     }
     if (BytesReceived != RxBytes)
     {
         ::std::cerr << "Error : " << BytesReceived
                     << " bytes out of declared " << RxBytes 
                     << "is received" << ::std::endl;
+        return 0;
     }
-    
+    return 0;    
 }
 
+void FtdiHandler::clearRxBuf()
+{
+    m_ft_status = FT_Purge(m_selDevHandle, FT_PURGE_RX );
+    if (m_ft_status != FT_OK)
+    {
+        ::std::cerr << "Can't clear RX buffer of the device " << m_selDevDescription << '\n'
+            << "Error : " << m_ft_status << ::std::endl;
+    }
+}
