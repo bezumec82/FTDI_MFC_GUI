@@ -7,8 +7,11 @@
 
 
 CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent)
+	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent),
+	m_ftdiLogger( m_ftdiHandler )
 {
+	m_ftdiLogger.registerCallBack( ::std::bind(&CMFCDlg::loggerCallBack, this, 
+		::std::placeholders::_1, ::std::placeholders::_2) );
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
 		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);

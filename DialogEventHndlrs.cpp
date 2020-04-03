@@ -96,97 +96,53 @@ void CMFCDlg::OnBnClickedSave()
 	CFileDialog dlgFile(FALSE); //save file
 	if (dlgFile.DoModal() == IDOK)
 	{
-		m_saveFPth = dlgFile.GetPathName();
-		m_eBoxSaveFPth.SetWindowTextW(m_saveFPth);
+		CString file_path = dlgFile.GetPathName();
+		m_ftdiLogger.setFileName(file_path);
+		//m_saveFPth = file_path;
+		m_eBoxSaveFPth.SetWindowTextW(file_path);
 	}
 }
 
-//void CMFCDlg::OnCheckedImmSave()
-//{
-//	m_saveImmediately.store(!m_saveImmediately.load());
-//}
+void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode, 
+	::FTDI::Logger::Data& data)
+{
+	switch (errCode)
+	{
+		case ::FTDI::Logger::EventCode::NO_FILE_NAME_ERR:
+		{
+			m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
+			break;
+		}
+		case ::FTDI::Logger::EventCode::FOPEN_ERR:
+		{
+			m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
+			break;
+		}
+		case ::FTDI::Logger::EventCode::STOPPED:
+		{
+			m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
+			m_eBoxImmRXrate.SetWindowTextW(L"0.0");
+			break;
+		}
+		case ::FTDI::Logger::EventCode::IMMEDIATE_RX_RATE:
+		{
+			m_eBoxImmRXrate.SetWindowTextW(::std::get<CString>(data));
+		}
+		case ::FTDI::Logger::EventCode::MEDIUM_RX_RATE:
+		{
+			m_eBoxMedRXrate.SetWindowTextW(::std::get<CString>(data));
+		}
+
+	}//end switch
+}
 
 #define SAVE_PERIOD_MS 100
 void CMFCDlg::OnChBoxStartStopSave()
 {
-	CFileException ex;
-
 	//handle stop
-	if (m_saveState.load()) //reading/saving in process
-	{
-		m_saveState.store(false);
-		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
-		return;
-	}
-
-	//open file
-	if ( m_saveFPth.IsEmpty() )
-	{
-		::std::cerr << "File to save is not set" << ::std::endl;
-		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
-		return;
-	}
-	if (!m_saveFile.Open(m_saveFPth,
-		CFile::modeWrite 
-		| CFile::modeCreate 
-		| CFile::shareDenyWrite, &ex))
-	{
-		TCHAR szCause[255] = { 0 };
-		ex.GetErrorMessage(szCause, sizeof(szCause)/2 - 1);
-		::std::cout << "Can't create/open file "
-			<< utf16ToUtf8(m_saveFPth.GetString()) << '\n'
-			<< "Error : " << utf16ToUtf8(szCause)
-			<< ::std::endl;
-		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
-		return;
-	}
-
-	//reading to the file
-	auto work = [&]() mutable
-	{
-		TimeStat time_stat;
-		//try to open device
-		if (m_ftdiHandler.openDevice() == 0)
-		{
-			::std::cout << "Start reading data from the device "
-						<< m_ftdiHandler.getSelDev() << ::std::endl;
-			m_saveState.store(true);
-			m_ftdiHandler.clearRxBuf();
-			time_stat.start();
-		}
-		else
-		{
-			m_ftdiHandler.closeDevice(); //try to fix situation
-		}
-		while (m_saveState.load())
-		{
-			::std::vector<char> buffer;
-			if( m_ftdiHandler.recvData(buffer) != 0)
-				break;
-			m_saveFile.Write(buffer.data(), buffer.size());
-			//if(m_saveImmediately.load())
-				m_saveFile.Flush();
-
-			m_eBoxImmRXrate.SetWindowTextW( \
-				time_stat.getImmRXrate(buffer.size()));
-			m_eBoxMedRXrate.SetWindowTextW( \
-				time_stat.getMedRXrate(buffer.size()));
-
-			::std::this_thread::sleep_for( \
-				::std::chrono::milliseconds(SAVE_PERIOD_MS));
-		}
-		m_eBoxImmRXrate.SetWindowTextW(L"0.0");
-		m_ftdiHandler.closeDevice();
-
-		time_stat.stop();
-
-		m_saveFile.Flush();
-		m_saveFile.Close();
-		m_chBoxStartStopSave.SetCheck(BST_UNCHECKED);
-		::std::cout << "Data saving is stopped" << ::std::endl;
-	};
-
-	m_saveFuture = ::std::async(std::launch::async, work);
+	if (m_ftdiLogger.isLogging()) //reading/saving in process
+		m_ftdiLogger.stop();
+	else m_ftdiLogger.start();
 }
 
 

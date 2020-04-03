@@ -12,11 +12,19 @@
 #include <unordered_map>
 #include <atomic>
 #include <mutex>
+#include <list>
+#include <functional>
+#include <future>
+#include <variant>
 
 #include <windows.h>
 #include <ftd2xx.h>
 
-#define RX_TIMEOUT_MS 100
+#include "Utilities.h"
+#include "TimeStat.h"
+
+#define RX_TIMEOUT_MS   100
+#define SAVE_PERIOD_MS  100
 
 namespace FTDI
 {
@@ -82,6 +90,60 @@ namespace FTDI
         uint32_t m_devRefCntr{ 0 };
 
     };
+
+    class Logger
+    {
+    public: /*--- Enumerators ---*/
+
+        using Data = ::std::variant<CString>;
+        
+        enum class EventCode : int8_t
+        {
+            FOPEN_ERR = -2,
+            NO_FILE_NAME_ERR = -1,
+            ALL_GOOD = 0,
+            STOPPED = 1,
+            IMMEDIATE_RX_RATE = 2,
+            MEDIUM_RX_RATE = 3,
+        };
+        using CallBack = ::std::function<void(const EventCode&, Data&)>;
+    public: /*--- Constructors ---*/
+        Logger(FtdiHandler& ftdi_handler) :
+            m_ftdiHandler_ref{ftdi_handler}
+        { }
+
+    private:/*--- Methods ---*/
+        int32_t openFile();
+        void notifyAll(const EventCode& err_code, Data& data);
+        void doLogging();
+
+    public: /*--- Methods ---*/       
+
+        void start();
+        void stop();
+
+    public: /*--- Getters/Setters ---*/
+        void registerCallBack(CallBack call_back)
+        {
+            m_callBacks.emplace_back( call_back );
+        }
+        void setFileName(CString fileName)
+        {
+            m_fileName = fileName;
+        }
+        bool isLogging()
+        {
+            return m_startStopFlag.load();
+        }
+    private: /*--- Variables ---*/
+        FtdiHandler& m_ftdiHandler_ref;
+        CString m_fileName;
+        ::std::atomic_bool m_startStopFlag{ false };
+        ::std::list< CallBack > m_callBacks;
+        CFile m_saveFile;
+        ::std::future<void> m_future;
+    };
 } //end namespace
+
 
 #endif

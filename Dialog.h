@@ -11,6 +11,8 @@
 #include <thread>
 #include <iomanip> // std::setprecision
 #include <algorithm>
+#include <any>
+#include <functional>
 
 #include "ftdi.h"
 #include "Utilities.h"
@@ -64,7 +66,7 @@ public: /*--- Event handlers ---*/
 
 	afx_msg void OnBnClickedSave(); 
 	afx_msg void OnChBoxStartStopSave();
-	afx_msg void OnCheckedImmSave();
+	//afx_msg void OnCheckedImmSave();
 
 private: /*--- Helpers ---*/
 	::std::unique_ptr< OneLine > m_oneLine_uptr_arr[NUM_OF_SEND_LINES];
@@ -74,17 +76,21 @@ private: /*--- Control variables ---*/
 
 private: /*--- Utility variables ---*/
 	::FTDI::FtdiHandler m_ftdiHandler;
-
+	
 private: /*--- Read from device ---*/
+	::FTDI::Logger m_ftdiLogger;
+	void loggerCallBack(const ::FTDI::Logger::EventCode&,
+		::FTDI::Logger::Data&);
+
 	CEdit m_eBoxSaveFPth;
-	CFile m_saveFile;
-	CString m_saveFPth;
 	CEdit m_eBoxImmRXrate;
 	CEdit m_eBoxMedRXrate;
 	CButton m_chBoxStartStopSave;
 
-	::std::atomic_bool m_saveState{ false };
-	::std::future<void> m_saveFuture;
+	//CFile m_saveFile;
+	//CString m_saveFPth;
+	//::std::atomic_bool m_saveState{ false };
+	//::std::future<void> m_saveFuture;
 	//::std::atomic_bool m_saveImmediately{ false };
 
 private: /*--- Utitilities ---*/
