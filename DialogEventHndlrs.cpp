@@ -4,6 +4,7 @@
 BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_WM_CLOSE()
 
 	ON_BN_CLICKED(ID_BT_SCAN, &CMFCDlg::OnBnClickedScan)
 	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
@@ -97,7 +98,9 @@ void CMFCDlg::OnBnClickedSave()
 	{
 		CString file_path = dlgFile.GetPathName();
 		m_ftdiLogger.setFileName(file_path);
-		m_eBoxSaveFPth.SetWindowTextW(file_path);
+
+		CFile file(file_path, CFile::modeRead);
+		m_eBoxSaveFPth.SetWindowTextW(file.GetFileName());
 	}
 }
 
@@ -125,18 +128,21 @@ void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode,
 		case ::FTDI::Logger::EventCode::IMMEDIATE_RX_RATE:
 		{
 			m_eBoxImmRXrate.SetWindowTextW(::std::get<CString>(data));
+			break;
 		}
 		case ::FTDI::Logger::EventCode::MEDIUM_RX_RATE:
 		{
 			m_eBoxMedRXrate.SetWindowTextW(::std::get<CString>(data));
+			break;
 		}
-
 	}//end switch
 }
 
 void CMFCDlg::OnChBoxStartStopSave()
 {
 	if (m_ftdiLogger.isLogging()) //reading/saving in process
+	{
 		m_ftdiLogger.stop();
+	}
 	else m_ftdiLogger.start();
 }

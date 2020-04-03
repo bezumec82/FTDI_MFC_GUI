@@ -49,9 +49,9 @@ namespace FTDI
         void printFTDIDevices();
         int32_t openDevice();
         void closeDevice();
-        void sendData(::std::vector<char>&);
+        int32_t sendData(::std::vector<char>&);
         int32_t recvData(::std::vector<char>&);
-        void clearRxBuf();
+        int32_t clearRxBuf();
     public: /*--- Setters/Getters ---*/
         const DevDescription& getSelDev() const
         {
@@ -89,10 +89,10 @@ namespace FTDI
 
     class Logger
     {
-    public: /*--- Enumerators ---*/
-
+    public: /*--- Aliaces ---*/
         using Data = ::std::variant<CString>;
-        
+
+    public: /*--- Enumerators ---*/
         enum class EventCode : int8_t
         {
             FOPEN_ERR = -2,
@@ -103,6 +103,7 @@ namespace FTDI
             MEDIUM_RX_RATE = 3,
         };
         using CallBack = ::std::function<void(const EventCode&, Data&)>;
+    
     public: /*--- Constructors ---*/
         Logger(FtdiHandler& ftdi_handler) :
             m_ftdiHandler_ref{ftdi_handler}
@@ -113,8 +114,7 @@ namespace FTDI
         void notifyAll(const EventCode& err_code, Data& data);
         void doLogging();
 
-    public: /*--- Methods ---*/       
-
+    public: /*--- Methods ---*/
         void start();
         void stop();
 
@@ -129,17 +129,82 @@ namespace FTDI
         }
         bool isLogging()
         {
-            return m_startStopFlag.load();
+            return m_isLogging.load();
         }
     private: /*--- Variables ---*/
         FtdiHandler& m_ftdiHandler_ref;
+        
         CString m_fileName;
-        ::std::atomic_bool m_startStopFlag{ false };
-        ::std::list< CallBack > m_callBacks;
         CFile m_saveFile;
+
+        ::std::atomic_bool m_startStopFlag{ false };
+        ::std::atomic_bool m_isLogging{ false };
+
+        ::std::list< CallBack > m_callBacks;
+
         ::std::future<void> m_future;
     };
 
+    class Writer
+    {
+    public: /*--- Aliaces ---*/
+        using Data = ::std::variant<CString>;
+
+    public: /*--- Enumerators ---*/
+        enum class EventCode : int8_t
+        {
+            FTDI_OPEN_ERR = -3,
+            NO_DATA_ERR = -2,
+            NO_PERIOD_ERR = -1,
+            ALL_GOOD = 0,
+            STOPPED = 1,
+        };
+        using CallBack = ::std::function<void(const EventCode&, Data&)>;
+
+    public: /*--- Constructor ---*/
+        Writer(FtdiHandler& ftdi_handler)
+            : m_ftdiHandler_ref{ ftdi_handler }
+        {}
+
+    private: /*--- Methods ---*/
+        void notifyAll(const EventCode& err_code, Data& data);
+        void sendOnce();
+        void doSend();
+
+    public: /*--- Methods ---*/
+        int32_t readFile();
+        void start();
+        void stop();
+    
+    public: /*--- Getters/Setters ---*/
+        void registerCallBack(CallBack call_back)
+        {
+            m_callBacks.emplace_back(call_back);
+        }
+        bool isWriting()
+        {
+            return m_startStopFlag.load();
+        }
+        void setPeriod(CString& period);
+
+        void setFileName(CString fileName)
+        {
+            m_fileName = fileName;
+        }
+
+    private: /*--- Variables ---*/
+        FtdiHandler& m_ftdiHandler_ref;
+
+        CString m_fileName;
+        CFile m_sendFile;
+        ::std::vector<char> m_fileDataBuf;
+        int32_t m_period{ -1 };
+
+        ::std::atomic_bool m_startStopFlag{ false };
+        ::std::list< CallBack > m_callBacks;
+
+        ::std::future<void> m_future;
+    };
 } //end namespace
 
 

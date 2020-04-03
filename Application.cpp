@@ -120,6 +120,7 @@ BOOL CMFCApp::InitInstance()
 
 int CMFCApp::ExitInstance()
 {
+	::std::cout << "Closing application" << ::std::endl;
 	//	deallocate console
 #ifdef _DEBUG
 	if (!FreeConsole())

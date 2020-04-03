@@ -14,38 +14,32 @@ class OneLine
 {
 public:
 	OneLine(FTDI::FtdiHandler& ftdiHandler)
-		: m_ftdiHandler_ref{ ftdiHandler }
+		: m_ftdiHandler_ref{ ftdiHandler },
+		m_ftdiWriter{ ftdiHandler }
 	{
-		//m_eBoxSendState.SetWindowTextW(L"stopped");
-		//m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+		m_ftdiWriter.registerCallBack(::std::bind(&OneLine::writerCallBack, this,
+			::std::placeholders::_1, ::std::placeholders::_2));
 	}
 
-	/*--- GUI ---*/
+public: /*--- Methods ---*/
+	void writerCallBack(const ::FTDI::Writer::EventCode& errCode,
+		::FTDI::Writer::Data& data);
+	void getPeriod();
+
+public: /*--- Event handlers ---*/
+	void OpenHndlr();
+	void StartStopHndlr();
+	void abort()
+	{
+		m_ftdiWriter.stop();
+	}
+
+private: /*--- Variables ---*/
+	::FTDI::FtdiHandler& m_ftdiHandler_ref;
+	::FTDI::Writer m_ftdiWriter;
+public: /*--- Variables --- */
 	CEdit m_eBoxOpenedFPth;
 	CEdit m_eBoxSendPeriod;
 	CButton m_chBoxStartStop;
-
-private:
-	::FTDI::FtdiHandler& m_ftdiHandler_ref;
-	/*--- Storage ---*/
-	CString				m_openedFPth{ "" };
-	::std::atomic_bool	m_sendState{ false };
-	int32_t				m_period{ -1 };
-
-	/*--- Send data ---*/
-	::std::vector<char> m_fileDataBuf;
-	BOOL fileOpened{ false };
-
-	/*--- Activity ---*/
-	::std::future<void> m_future;
-	::std::thread		m_worker;
-
-public:
-	void OpenHndlr();
-	void StartStopHndlr();
-
-private: /*--- Utility ---*/
-	void getPeriod();
-	int32_t readFile();
 };
 

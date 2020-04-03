@@ -33,6 +33,7 @@ BOOL CMFCDlg::OnInitDialog()
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
 		(* m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+		(*m_oneLine_uptr_arr[idx]).m_eBoxSendPeriod.SetWindowTextW(L"0");
 	}
 	m_eBoxImmRXrate.SetWindowTextW(L"0.0");
 	m_eBoxMedRXrate.SetWindowTextW(L"0.0");
@@ -67,7 +68,27 @@ void CMFCDlg::OnPaint()
 	{
 		CDialogEx::OnPaint();
 	}
+	//autoscan
+	OnBnClickedScan();
+
 }
+
+void CMFCDlg::OnClose()
+{
+	::std::cout << "Stop all activity" << ::std::endl;
+	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
+	{
+		(*m_oneLine_uptr_arr[idx]).abort();
+	}
+	if (m_ftdiLogger.isLogging())
+	{
+		m_ftdiLogger.stop();
+	}
+
+	::std::this_thread::sleep_for(::std::chrono::milliseconds(300));
+	CDialogEx::OnClose();
+}
+
 
 // The system calls this function to obtain the cursor to display while the user drags
 //  the minimized window.

@@ -8,55 +8,37 @@
 void OneLine::getPeriod()
 {
 
-	CString freqText;
-	m_eBoxSendPeriod.GetWindowText(freqText);
-	try
-	{
-		m_period = ::std::stoi(freqText.GetString());
-		::std::cout << "Period is set to " << m_period << ::std::endl;
-	}
-	catch (const ::std::invalid_argument& ia)
-	{
-		::std::cerr << ia.what() << '\n';
-		::std::cerr << "Invalid send period value" << ::std::endl;
-		m_period = -1;
-	}
+	CString period_cstr;
+	m_eBoxSendPeriod.GetWindowText(period_cstr);
+	m_ftdiWriter.setPeriod(period_cstr);
 }
 
-int32_t OneLine::readFile()
+void OneLine::writerCallBack(const ::FTDI::Writer::EventCode& errCode,
+	::FTDI::Writer::Data& data)
 {
-	CFile file;
-	CFileException ex;
-
-	if (m_openedFPth.IsEmpty())
+	switch (errCode)
 	{
-		::std::cerr << "File to write is not set" << ::std::endl;
-		return -1;
+		case ::FTDI::Writer::EventCode::NO_PERIOD_ERR:
+		{
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
+			break;
+		}
+		case ::FTDI::Writer::EventCode::NO_DATA_ERR:
+		{
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
+			break;
+		}
+		case ::FTDI::Writer::EventCode::FTDI_OPEN_ERR:
+		{
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
+			break;
+		}
+		case ::FTDI::Writer::EventCode::STOPPED:
+		{
+			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
+			break;
+		}
 	}
-	if ( !file.Open(m_openedFPth, CFile::modeRead | CFile::typeBinary | CFile::shareDenyWrite, &ex) )
-	{
-		::std::cout << "Can't open file "
-					<< utf16ToUtf8(m_openedFPth.GetString()) << ::std::endl;
-
-		return -1;
-	}
-	m_fileDataBuf.clear();
-	m_fileDataBuf.resize(UINT(file.GetLength()));
-	UINT bytesRead = file.Read(m_fileDataBuf.data(), UINT(file.GetLength()));
-	file.Close();
-	if (bytesRead > 0)
-	{
-		::std::cout << "Data from file '" << utf16ToUtf8(m_openedFPth.GetString())
-					<< "' is stored." << ::std::endl;
-		return 0;
-	}
-	else
-	{
-		::std::cerr << "No data was read" << ::std::endl;
-		return -1;
-	}
-
-
 }
 
 /*----------------*/
@@ -67,77 +49,26 @@ void OneLine::OpenHndlr()
 	CFileDialog dlgFile(TRUE);
 	if (dlgFile.DoModal() == IDOK)
 	{
-		m_openedFPth = dlgFile.GetPathName();		
-		if(!readFile())
-			m_eBoxOpenedFPth.SetWindowTextW(m_openedFPth);
+		CString file_path = dlgFile.GetPathName();
+		m_ftdiWriter.setFileName(file_path);
+		if (m_ftdiWriter.readFile() == 0)
+		{
+			CFile file(file_path, CFile::modeRead);
+			m_eBoxOpenedFPth.SetWindowTextW(file.GetFileName());
+		}
 	}
 }
 
 void OneLine::StartStopHndlr()
 {
-	//handle stop
-	if (m_sendState.load()) //send in process
-	{
-		m_sendState.store(false);
-		return;
-	}
-
-	//handle start
-	getPeriod();
-	if (m_period < 0)
-	{
-		::std::cerr << "Period isn't set.\n"
-					<< "Can't start sending." << ::std::endl;
-		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-		return;
-	}
-
-	if (m_fileDataBuf.empty())
-	{
-		::std::cerr << "No data to send.\n"
-					<< "Can't start sending." << ::std::endl;
-		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-		return;
-	}
 	
-	if (m_period == 0) //send once
+	if (m_ftdiWriter.isWriting())
 	{
-		::std::cout << "Sending once." << ::std::endl;
-		if (m_ftdiHandler_ref.openDevice() != 0)
-		{
-			m_ftdiHandler_ref.closeDevice();
-			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-			return;
-		}
-		m_ftdiHandler_ref.sendData(m_fileDataBuf);
-		m_ftdiHandler_ref.closeDevice();
-		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-		return;
+		m_ftdiWriter.stop();
 	}
-
-	auto work = [&]() mutable {
-		//try to open device
-		if (m_ftdiHandler_ref.openDevice() != 0)
-		{
-			m_ftdiHandler_ref.closeDevice(); //try to fix situation
-			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-			return;
-		}
-		::std::cout << "Start sending data to the device "
-			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
-		m_sendState.store(true);
-		while (m_sendState.load() == true)
-		{
-			m_ftdiHandler_ref.sendData(m_fileDataBuf);
-			::std::this_thread::sleep_for(::std::chrono::milliseconds(m_period));
-		}
-		m_ftdiHandler_ref.closeDevice();
-		m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-		::std::cout << "Data sending is stopped" << ::std::endl;
-	};
-#if(1)
-	m_future = ::std::async(std::launch::async, work);
-#else
-	m_worker = ::std::move(::std::thread(work));
-#endif
+	else
+	{
+		getPeriod();
+		m_ftdiWriter.start();
+	}
 }
