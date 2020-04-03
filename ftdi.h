@@ -47,9 +47,6 @@ namespace FTDI
 
         int32_t findFTDIDevices();
         void printFTDIDevices();
-#if(0)
-        void fillComboBox(CComboBox&);
-#endif
         int32_t openDevice();
         void closeDevice();
         void sendData(::std::vector<char>&);
@@ -86,7 +83,6 @@ namespace FTDI
         //synchronization
         ::std::atomic_bool m_deviceIsLocked{false};
         ::std::mutex m_sendMtx;
-
         uint32_t m_devRefCntr{ 0 };
 
     };
@@ -143,6 +139,7 @@ namespace FTDI
         CFile m_saveFile;
         ::std::future<void> m_future;
     };
+
 } //end namespace
 
 

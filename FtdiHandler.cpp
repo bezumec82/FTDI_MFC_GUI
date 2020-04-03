@@ -89,32 +89,6 @@ typedef struct _ft_device_list_info_node {
     } //end for
 }
 
-#if(0)
-void FtdiHandler::fillComboBox(CComboBox& cbox)
-{
-    cbox.ResetContent();
-    if (!m_num_devs) 
-    { 
-        ::std::cout << "No devices in the system" << ::std::endl; 
-        return;
-    }
-#if(1)
-    for (::std::pair< ::std::string, FT_DEVICE_LIST_INFO_NODE > elem : m_devDescriptionMap)
-    {
-        cbox.AddString( CString{ elem.first.c_str() } );
-    }
-#else
-    for (DWORD dev_idx = 0; dev_idx < m_num_devs; dev_idx++)
-    {
-        ::std::wstringstream devices;
-        devices << m_dev_list_uptr[dev_idx].Description
-                << " SN: " << m_dev_list_uptr[dev_idx].SerialNumber << ::std::end;
-        cbox.AddString(devices.str().c_str());
-    }
-#endif
-}
-#endif
-
 void FtdiHandler::setSelDev(::std::string desc)
 {
     if (!isLocked())

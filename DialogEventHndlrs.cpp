@@ -18,7 +18,6 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_BN_CLICKED(ID_BT_SAVE, &CMFCDlg::OnBnClickedSave)
 	ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE, 
 		&CMFCDlg::OnChBoxStartStopSave)
-	//ON_BN_CLICKED(IDC_CHECK_IMM_SAVE, &CMFCDlg::OnCheckedImmSave)
 END_MESSAGE_MAP()
 
 void CMFCDlg::DoDataExchange(CDataExchange* pDX)
@@ -98,7 +97,6 @@ void CMFCDlg::OnBnClickedSave()
 	{
 		CString file_path = dlgFile.GetPathName();
 		m_ftdiLogger.setFileName(file_path);
-		//m_saveFPth = file_path;
 		m_eBoxSaveFPth.SetWindowTextW(file_path);
 	}
 }
@@ -136,102 +134,9 @@ void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode,
 	}//end switch
 }
 
-#define SAVE_PERIOD_MS 100
 void CMFCDlg::OnChBoxStartStopSave()
 {
-	//handle stop
 	if (m_ftdiLogger.isLogging()) //reading/saving in process
 		m_ftdiLogger.stop();
 	else m_ftdiLogger.start();
 }
-
-
-#if(0)
-void CMFCDlg::OnBnClickedOpen1()
-{
-	setName(m_eBoxOpenedFPth1, m_openedFPth1);
-}
-
-void CMFCDlg::OnBnClickedOpen2()
-{
-	setName(m_eBoxOpenedFPth2, m_openedFPth2);
-}
-
-void CMFCDlg::OnBnClickedOpen3()
-{
-	setName(m_eBoxOpenedFPth3, m_openedFPth3);
-}
-
-void CMFCDlg::OnBnClickedOpen4()
-{
-	setName(m_eBoxOpenedFPth4, m_openedFPth4);
-}
-#endif
-
-#if(0)
-void CMFCDlg::OnBnClickedStartStop1()
-{
-	int period = getPeriod(m_eBoxSendPeriod1);
-	::std::vector<char> fileData;
-	if (!period)
-	{
-		::std::cout << "Frequency isn't set.\n"
-			<< "Can't start sending." << ::std::endl;
-		return;
-	}
-	else
-	{
-		::std::cout << "Frequency is set to " << period << ::std::endl;
-	}
-
-
-	if (m_openedFPth1 == "")
-	{
-		::std::cout << "File to send isn't set.\n"
-			<< "Can't start sending." << ::std::endl;
-		return;
-	}
-
-	//read file to buffer
-	if (readFile(m_openedFPth1, fileData) != 0)
-	{
-		return;
-	}
-
-	//show new state
-	toggleState(m_eBoxSendState1, sendState1);
-
-	auto work = [&, fileData, period]() mutable {
-		m_ftdiHandler.openDevice(m_selectedDevice);
-		::std::cout << "Start sending data to the device "
-			<< m_selectedDevice << ::std::endl;
-		while (sendState1.load())
-		{
-			m_ftdiHandler.sendData(fileData, m_selectedDevice);
-			::std::this_thread::sleep_for(::std::chrono::milliseconds(period));
-		}
-		m_ftdiHandler.closeDevice(m_selectedDevice);
-	};
-#if(1)
-	m_future1 = ::std::async(std::launch::async, work);
-#else
-	m_worker1 = ::std::move(::std::thread(work));
-#endif
-}
-
-void CMFCDlg::OnBnClickedStartStop2()
-{
-	toggleState(m_eBoxSendState2, sendState2);
-}
-
-void CMFCDlg::OnBnClickedStartStop3()
-{
-	toggleState(m_eBoxSendState3, sendState3);
-}
-
-void CMFCDlg::OnBnClickedStartStop4()
-{
-	toggleState(m_eBoxSendState4, sendState4);
-}
-#endif
-

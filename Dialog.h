@@ -47,16 +47,6 @@ protected: /*--- Basic part ---*/
 	DECLARE_MESSAGE_MAP()
 
 public: /*--- Event handlers ---*/
-#if (0)
-	afx_msg void OnBnClickedOpen1();
-	afx_msg void OnBnClickedOpen2();
-	afx_msg void OnBnClickedOpen3();
-	afx_msg void OnBnClickedOpen4();
-	afx_msg void OnBnClickedStartStop1();
-	afx_msg void OnBnClickedStartStop2();
-	afx_msg void OnBnClickedStartStop3();
-	afx_msg void OnBnClickedStartStop4();
-#endif
 	afx_msg void OnBnClickedScan();
 	afx_msg void OnCbnSelchangeCombo();
 
@@ -81,23 +71,8 @@ private: /*--- Read from device ---*/
 	::FTDI::Logger m_ftdiLogger;
 	void loggerCallBack(const ::FTDI::Logger::EventCode&,
 		::FTDI::Logger::Data&);
-
 	CEdit m_eBoxSaveFPth;
 	CEdit m_eBoxImmRXrate;
 	CEdit m_eBoxMedRXrate;
-	CButton m_chBoxStartStopSave;
-
-	//CFile m_saveFile;
-	//CString m_saveFPth;
-	//::std::atomic_bool m_saveState{ false };
-	//::std::future<void> m_saveFuture;
-	//::std::atomic_bool m_saveImmediately{ false };
-
-private: /*--- Utitilities ---*/
-	void setName(CEdit&, CString&);
-	void toggleState(CEdit&, ::std::atomic_bool&);
-	uint32_t getPeriod(CEdit&);
-	int32_t readFile(CString& , ::std::vector<char>&);
-	
-	
+	CButton m_chBoxStartStopSave;	
 };
