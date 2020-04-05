@@ -1,2 +1,7 @@
-Debug
+Debug/
 .vs
+*.user
+*.exe
+*.pdb
+*.manifest
+*.cache
