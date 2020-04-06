@@ -69,7 +69,7 @@ BOOL CMFCApp::InitInstance()
 	// such as the name of your company or organization
 	SetRegistryKey(_T("Local AppWizard-Generated Applications"));
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	if( AllocConsole() )
 	{
 		FILE * fpstdin = stdin, * fpstdout = stdout, * fpstderr = stderr;
@@ -82,7 +82,7 @@ BOOL CMFCApp::InitInstance()
 	{
 		TRACE(traceAppMsg, 0, "Error: Can't allocate console.\n");
 	}
-#endif
+//#endif
 
 	CMFCDlg dlg;
 	m_pMainWnd = &dlg;
@@ -122,10 +122,10 @@ int CMFCApp::ExitInstance()
 {
 	::std::cout << "Closing application" << ::std::endl;
 	//	deallocate console
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	if (!FreeConsole())
 		AfxMessageBox(L"Could not free the console!");
-#endif
+//#endif
 	return CWinApp::ExitInstance();
 }
 
