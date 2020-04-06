@@ -25,12 +25,12 @@ int32_t Logger::openFile()
         | CFile::modeCreate
         | CFile::shareDenyWrite, &ex))
     {
-        TCHAR szCause[255] = { 0 };
-        ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
-        ::std::cout << "Can't create/open file "
-            << utf16ToUtf8(m_fileName.GetString()) << '\n'
-            << "Error : " << utf16ToUtf8(szCause)
-            << ::std::endl;
+		TCHAR szCause[255] = { 0 };
+		ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
+		::std::wcout << "Can't create/open file "
+			<< m_saveFile.GetFilePath() << '\n'
+			<< "Error : " << szCause
+			<< ::std::endl;
         notifyAll(EventCode::FOPEN_ERR, Data{} );
         return -1;
     }
@@ -63,7 +63,7 @@ void Logger::doLogging()
 			notifyAll(EventCode::STOPPED, Data{});
 			return;
 		}
-		time_stat.start();		
+		time_stat.start();
 		m_isLogging.store(true);
 		while (m_startStopFlag.load())
 		{
@@ -85,7 +85,7 @@ void Logger::doLogging()
 		m_ftdiHandler_ref.closeDevice();
 		time_stat.stop();
 		m_saveFile.Flush();
-		m_saveFile.Close();		
+		m_saveFile.Close();
 		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data saving is stopped" << ::std::endl;
 		m_isLogging.store(false);

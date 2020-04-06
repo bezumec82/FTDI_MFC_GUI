@@ -10,14 +10,14 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
 
 	ON_COMMAND_RANGE(
-		ID_BT_OPEN_1, ID_BT_OPEN_20, 
+		ID_BT_OPEN_1, ID_BT_OPEN_20,
 		openDispatch)
 	ON_COMMAND_RANGE(
-		IDC_CHBOX_START_STOP_1, IDC_CHBOX_START_STOP_20, 
+		IDC_CHBOX_START_STOP_1, IDC_CHBOX_START_STOP_20,
 		startStopDispatch)
 
 	ON_BN_CLICKED(ID_BT_SAVE, &CMFCDlg::OnBnClickedSave)
-	ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE, 
+	ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE,
 		&CMFCDlg::OnChBoxStartStopSave)
 END_MESSAGE_MAP()
 
@@ -28,11 +28,11 @@ void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		DDX_Control(pDX, IDC_EBOX_FILE_1 + idx, 
+		DDX_Control(pDX, IDC_EBOX_FILE_1 + idx,
 			(*m_oneLine_uptr_arr[idx]).m_eBoxOpenedFPth);
-		DDX_Control(pDX, IDC_EBOX_PERIOD_1 + idx, 
+		DDX_Control(pDX, IDC_EBOX_PERIOD_1 + idx,
 			(*m_oneLine_uptr_arr[idx]).m_eBoxSendPeriod);
-		DDX_Control(pDX, IDC_CHBOX_START_STOP_1 + idx, 
+		DDX_Control(pDX, IDC_CHBOX_START_STOP_1 + idx,
 			(*m_oneLine_uptr_arr[idx]).m_chBoxStartStop);
 	}
 
@@ -69,7 +69,8 @@ void CMFCDlg::openDispatch(UINT nID)
 	{
 		uint8_t idx = nID - ID_BT_OPEN_1;
 		::std::cout << "Open" << (idx + 1) << " is pressed" << ::std::endl;
-		(*m_oneLine_uptr_arr[idx]).OpenHndlr();
+		(*m_oneLine_uptr_arr[idx]).openHndlr();
+		m_stateHolder.saveState();
 	}
 	else
 	{
@@ -83,7 +84,7 @@ void CMFCDlg::startStopDispatch(UINT nID)
 	{
 		uint8_t idx = nID - IDC_CHBOX_START_STOP_1;
 		::std::cout << "Start/stop" << (idx + 1) << " is pressed" << ::std::endl;
-		( * m_oneLine_uptr_arr[idx]).StartStopHndlr();
+		( * m_oneLine_uptr_arr[idx]).startStopHndlr();
 	}
 	else
 	{
@@ -104,7 +105,7 @@ void CMFCDlg::OnBnClickedSave()
 	}
 }
 
-void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode, 
+void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode,
 	const ::FTDI::Logger::Data& data)
 {
 	switch (errCode)

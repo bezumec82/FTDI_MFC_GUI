@@ -10,12 +10,15 @@ CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent),
 	m_ftdiLogger( m_ftdiHandler )
 {
-	m_ftdiLogger.registerCallBack( ::std::bind(&CMFCDlg::loggerCallBack, this, 
+	m_ftdiLogger.registerCallBack(
+		::std::bind(&CMFCDlg::loggerCallBack, this,
 		::std::placeholders::_1, ::std::placeholders::_2) );
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
 		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);
+		m_stateHolder.registerWriter(idx, m_oneLine_uptr_arr[idx]->view());
 	}
+
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -39,6 +42,7 @@ BOOL CMFCDlg::OnInitDialog()
 	m_eBoxMedRXrate.SetWindowTextW(L"0.0");
 	//autoscan
 	OnBnClickedScan();
+	m_stateHolder.restoreState();
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 

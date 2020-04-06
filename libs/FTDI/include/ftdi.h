@@ -32,7 +32,7 @@ namespace FTDI
     using DevDescription = ::std::string;
     using DevDescriptions = ::std::vector < ::std::string >;
     using DevDescriptionMap = ::std::unordered_map< ::std::string, FT_DEVICE_LIST_INFO_NODE >;
-    
+
     //UseCase :
     //Call 'findFTDIDevices' to observe all FTDI devices in the system.
     //Set variable 'm_selDevDescr' to the selected one.
@@ -102,9 +102,9 @@ namespace FTDI
             IMMEDIATE_RX_RATE = 2,
             MEDIUM_RX_RATE = 3,
         };
-        using CallBack = 
+        using CallBack =
             ::std::function<void(const EventCode&, const Data&)>;
-    
+
     public: /*--- Constructors ---*/
         Logger(FtdiHandler& ftdi_handler) :
             m_ftdiHandler_ref{ftdi_handler}
@@ -128,13 +128,16 @@ namespace FTDI
         {
             m_fileName = fileName;
         }
+        const CString& getFileName()
+        {
+            return m_fileName;
+        }
         bool isLogging()
         {
             return m_isLogging.load();
         }
     private: /*--- Variables ---*/
         FtdiHandler& m_ftdiHandler_ref;
-        
         CString m_fileName;
         CFile m_saveFile;
 
@@ -160,7 +163,7 @@ namespace FTDI
             ALL_GOOD = 0,
             STOPPED = 1,
         };
-        using CallBack = 
+        using CallBack =
             ::std::function<void(const EventCode&, const Data&)>;
 
     public: /*--- Constructor ---*/
@@ -177,7 +180,7 @@ namespace FTDI
         int32_t readFile();
         void start();
         void stop();
-    
+
     public: /*--- Getters/Setters ---*/
         void registerCallBack(CallBack call_back)
         {
@@ -188,10 +191,18 @@ namespace FTDI
             return m_startStopFlag.load();
         }
         void setPeriod(CString& period);
+        int32_t getPerios()
+        {
+            return m_period;
+        }
 
         void setFileName(CString fileName)
         {
             m_fileName = fileName;
+        }
+        const CString& getFileName()
+        {
+            return m_fileName;
         }
 
     private: /*--- Variables ---*/

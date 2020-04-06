@@ -15,9 +15,10 @@
 #include <functional>
 
 #include "ftdi.h"
-//#include "Utilities.h"
 #include "OneLine.h"
-//#include "TimeStat.h"
+#include "StateHolder.h"
+
+
 
 #define NUM_OF_SEND_LINES	20
 
@@ -56,7 +57,7 @@ public: /*--- Event handlers ---*/
 	afx_msg void openDispatch(UINT nID);
 	afx_msg void startStopDispatch(UINT nID);
 
-	afx_msg void OnBnClickedSave(); 
+	afx_msg void OnBnClickedSave();
 	afx_msg void OnChBoxStartStopSave();
 	//afx_msg void OnCheckedImmSave();
 
@@ -68,7 +69,7 @@ private: /*--- Control variables ---*/
 
 private: /*--- Utility variables ---*/
 	::FTDI::FtdiHandler m_ftdiHandler;
-	
+
 private: /*--- Read from device ---*/
 	::FTDI::Logger m_ftdiLogger;
 	void loggerCallBack(const ::FTDI::Logger::EventCode&,
@@ -76,5 +77,8 @@ private: /*--- Read from device ---*/
 	CEdit m_eBoxSaveFPth;
 	CEdit m_eBoxImmRXrate;
 	CEdit m_eBoxMedRXrate;
-	CButton m_chBoxStartStopSave;	
+	CButton m_chBoxStartStopSave;
+
+private:/*--- Misc ---*/
+	StateHolder m_stateHolder;
 };

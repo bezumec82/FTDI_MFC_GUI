@@ -41,27 +41,40 @@ void OneLine::writerCallBack(const ::FTDI::Writer::EventCode& errCode,
 	}
 }
 
+int32_t OneLine::openFile(CString file_path)
+{
+	if (file_path.IsEmpty())
+	{
+		::std::cerr << "File path to open isn't set" << ::std::endl;
+		return -1;
+	}
+	m_ftdiWriter.setFileName(file_path);
+	if (m_ftdiWriter.readFile() == 0)
+	{
+		CFile file(file_path, CFile::modeRead);
+		m_eBoxOpenedFPth.SetWindowTextW(file.GetFileName());
+	}
+	else
+	{
+		return -1;
+	}
+	return 0;
+}
+
 /*----------------*/
 /*--- Handlers ---*/
 /*----------------*/
-void OneLine::OpenHndlr()
+void OneLine::openHndlr()
 {
 	CFileDialog dlgFile(TRUE);
 	if (dlgFile.DoModal() == IDOK)
 	{
-		CString file_path = dlgFile.GetPathName();
-		m_ftdiWriter.setFileName(file_path);
-		if (m_ftdiWriter.readFile() == 0)
-		{
-			CFile file(file_path, CFile::modeRead);
-			m_eBoxOpenedFPth.SetWindowTextW(file.GetFileName());
-		}
+		openFile(dlgFile.GetPathName());
 	}
 }
 
-void OneLine::StartStopHndlr()
+void OneLine::startStopHndlr()
 {
-	
 	if (m_ftdiWriter.isWriting())
 	{
 		m_ftdiWriter.stop();

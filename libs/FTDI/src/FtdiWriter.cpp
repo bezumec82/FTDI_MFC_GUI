@@ -3,7 +3,7 @@
 
 using namespace FTDI;
 
-void Writer::notifyAll(const EventCode& event, 
+void Writer::notifyAll(const EventCode& event,
 	const Data& data)
 {
 	for (const auto& func : m_callBacks)
@@ -18,7 +18,7 @@ int32_t Writer::readFile()
 		::std::cerr << "File to write is not set" << ::std::endl;
 		return -1;
 	}
-	if (!m_sendFile.Open(m_fileName, 
+	if (!m_sendFile.Open(m_fileName,
 		CFile::modeRead | CFile::typeBinary | CFile::shareDenyWrite, &ex))
 	{
 		::std::cout << "Can't open file "
@@ -33,7 +33,7 @@ int32_t Writer::readFile()
 	m_sendFile.Close();
 	if (bytesRead > 0)
 	{
-		::std::cout << "Data from file '" 
+		::std::cout << "Data from file '"
 			<< utf16ToUtf8(m_fileName.GetString())
 			<< "' is stored." << ::std::endl;
 		return 0;
@@ -102,7 +102,7 @@ void Writer::doSend()
 		}
 		m_startStopFlag.store(false);
 		m_ftdiHandler_ref.closeDevice();
-		notifyAll(EventCode::STOPPED, Data{});		
+		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
 	};
 	m_future = ::std::async(std::launch::async, work);
@@ -125,7 +125,7 @@ void Writer::start()
 		notifyAll(EventCode::NO_DATA_ERR, Data{});
 		return;
 	}
-	if (m_period == 0) 
+	if (m_period == 0)
 	{
 		sendOnce();
 		return;
