@@ -18,8 +18,6 @@
 #include "OneLine.h"
 #include "StateHolder.h"
 
-
-
 #define NUM_OF_SEND_LINES	20
 
 // CMFCDlg dialog
@@ -79,6 +77,6 @@ private: /*--- Read from device ---*/
 	CEdit m_eBoxMedRXrate;
 	CButton m_chBoxStartStopSave;
 
-private:/*--- Misc ---*/
+private: /*--- Misc ---*/
 	StateHolder m_stateHolder;
 };

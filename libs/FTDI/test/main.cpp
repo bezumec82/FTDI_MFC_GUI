@@ -3,6 +3,6 @@
 int main(int, char**)
 {
     ::FTDI::FtdiHandler ftdi_handler;
-    ftdi_handler.findFTDIDevices();
-    ftdi_handler.printFTDIDevices();
+    ftdi_handler.findFtdiDevices();
+    ftdi_handler.printFtdiDevices();
 }

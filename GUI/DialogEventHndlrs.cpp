@@ -44,8 +44,8 @@ void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 
 void CMFCDlg::OnBnClickedScan()
 {
-	if (!m_ftdiHandler.findFTDIDevices())
-		m_ftdiHandler.printFTDIDevices();
+	if (!m_ftdiHandler.findFtdiDevices())
+		m_ftdiHandler.printFtdiDevices();
 	//fill combo box
 	m_cBoxDevices.ResetContent();
 	const ::FTDI::DevDescriptions& dev_descs = m_ftdiHandler.getDevDescriptions();

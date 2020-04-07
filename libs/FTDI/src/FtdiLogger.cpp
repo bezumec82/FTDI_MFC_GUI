@@ -45,21 +45,21 @@ void Logger::doLogging()
 	{
 		TimeStat time_stat;
 		//try to open device
-		if (m_ftdiHandler_ref.openDevice() == 0)
+		if (m_ftdiHandler_ref.openSelDevice() == 0)
 		{
 			::std::cout << "Start reading data from the device "
 				<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
 		}
 		else
 		{
-			m_ftdiHandler_ref.closeDevice(); //try to fix situation
+			m_ftdiHandler_ref.closeSelDevice(); //try to fix situation
 			notifyAll(EventCode::STOPPED, Data{});
 			return;
 		}
 
 		if (m_ftdiHandler_ref.clearRxBuf() != 0)
 		{
-			m_ftdiHandler_ref.closeDevice();
+			m_ftdiHandler_ref.closeSelDevice();
 			notifyAll(EventCode::STOPPED, Data{});
 			return;
 		}
@@ -82,7 +82,7 @@ void Logger::doLogging()
 			::std::this_thread::sleep_for(\
 				::std::chrono::milliseconds(SAVE_PERIOD_MS));
 		}
-		m_ftdiHandler_ref.closeDevice();
+		m_ftdiHandler_ref.closeSelDevice();
 		time_stat.stop();
 		m_saveFile.Flush();
 		m_saveFile.Close();

@@ -16,6 +16,7 @@
 #include <functional>
 #include <future>
 #include <variant>
+#include <algorithm>
 
 #include <windows.h>
 #include <ftd2xx.h>
@@ -28,34 +29,44 @@
 
 namespace FTDI
 {
-    using DevListUptr = ::std::unique_ptr< FT_DEVICE_LIST_INFO_NODE[] >;
+
+    using Node = FT_DEVICE_LIST_INFO_NODE;
+    using DevNodes = ::std::vector<Node>;
+
     using DevDescription = ::std::string;
     using DevDescriptions = ::std::vector < ::std::string >;
-    using DevDescriptionMap = ::std::unordered_map< ::std::string, FT_DEVICE_LIST_INFO_NODE >;
+    using DevDescriptionMap = ::std::unordered_map< DevDescription, Node >;
+
 
     //UseCase :
-    //Call 'findFTDIDevices' to observe all FTDI devices in the system.
+    //Call 'findFtdiDevices' to observe all FTDI devices in the system.
     //Set variable 'm_selDevDescr' to the selected one.
     //Now it is possible to open selected device and start reading/writing
     class FtdiHandler
     {
     public: /*--- Constructor ---*/
         FtdiHandler():
-            m_ft_status{ FT_OTHER_ERROR },
-            m_num_devs{ 0 }
+            m_selDev{ m_devDescriptionMap.end() }
         { }
 
-        int32_t findFTDIDevices();
-        void printFTDIDevices();
-        int32_t openDevice();
-        void closeDevice();
+    private: /*--- Implementation ----*/
+        DevDescription makeDevDescription(Node& );
+        void mergeDevsList(DevNodes& devs);
+
+
+    public: /*--- Methods ---*/
+        INT findFtdiDevices();
+        void printFtdiDevices();
+        int32_t openSelDevice();
+        void closeSelDevice();
         int32_t sendData(::std::vector<char>&);
         int32_t recvData(::std::vector<char>&);
         int32_t clearRxBuf();
+
     public: /*--- Setters/Getters ---*/
         const DevDescription& getSelDev() const
         {
-            return m_selDevDescription;
+            return m_selDev->first;
         }
         void setSelDev(::std::string desc);
         bool isLocked()
@@ -70,13 +81,9 @@ namespace FTDI
 
     private: /*--- Variables ---*/
         //hardware
-        FT_STATUS m_ft_status;
-        DevListUptr m_dev_list_uptr;
-        DWORD m_num_devs;
-        FT_HANDLE m_selDevHandle{ nullptr };
-
+        DevNodes m_devNodes;
+        DevDescriptionMap::iterator m_selDev;
         //representation at GUI side
-        DevDescription m_selDevDescription;
         DevDescriptions m_devDescriptions;
         DevDescriptionMap m_devDescriptionMap;
 
