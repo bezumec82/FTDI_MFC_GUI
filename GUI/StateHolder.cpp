@@ -1,6 +1,17 @@
 #include "pch.h"
 #include "StateHolder.h"
 
+StateHolder::StateHolder()
+{
+    if (openFile(FILE_NAME) != 0) return;
+    else readFile();
+}
+
+void StateHolder::registerWriter(UINT line_idx, ::OneLine::View& view)
+{
+    m_viewMap.insert({ line_idx, view });
+}
+
 int32_t StateHolder::openFile(CString file_path)
 {
     CFileException ex;
@@ -21,14 +32,15 @@ int32_t StateHolder::openFile(CString file_path)
             << ::std::endl;
         return -1;
     }
-    ::std::wcout << "File " << m_stateFile.GetFilePath().GetString() << " was opened" << ::std::endl;
+    ::std::wcout << "File " << m_stateFile.GetFilePath().GetString()
+        << " was opened" << ::std::endl;
     return 0;
 }
 
 int32_t StateHolder::readFile()
 {
     UINT num_bytes = m_stateFile.GetLength();
-    UINT num_chars = m_stateFile.GetLength() / sizeof(TCHAR);
+    UINT num_chars = num_bytes / sizeof(TCHAR);
     UINT read_bytes = m_stateFile.Read(m_jsonData.GetBuffer(num_chars), num_bytes);
     m_jsonData.ReleaseBuffer();
     if (read_bytes != num_bytes)
@@ -40,18 +52,22 @@ int32_t StateHolder::readFile()
     return read_bytes;
 }
 
+::std::wstring StateHolder::writerKey(UINT line_idx)
+{
+    return ::std::wstring(L"Writer #")
+        + ::std::to_wstring(line_idx);
+}
+
 void StateHolder::saveState()
 {
     JsonBuffer json_buffer;
     JsonWriter json_writer(json_buffer);
     json_writer.StartObject();
-    for (auto& val : m_viewMap)
+    for (auto& map_pair : m_viewMap)
     {
-        ::std::wstring key = ::std::wstring(L"Writer #")
-            + ::std::to_wstring(val.first);
-
+        ::std::wstring key = writerKey(map_pair.first);
         json_writer.Key(key.c_str());
-        CString file_name{ val.second.getFile().GetString() };
+        CString file_name{ map_pair.second.getFile().GetString() };
         //Json doesn't support shitty '\\'
         file_name.Replace(L'\\', L'/');
         json_writer.String(file_name);
@@ -68,20 +84,30 @@ void StateHolder::saveState()
 
 void StateHolder::restoreState()
 {
-    if (!m_document.IsObject()) return;
+    JsonDocument document;
+    if (document.Parse(m_jsonData.GetString()).HasParseError())
+    {
+        ::std::cerr << "Can't parse input data" << std::endl;
+    }
+    else
+    {
+        ::std::cout << "JSON state document was successfully parsed"
+            << ::std::endl;
+    }
+    if (!document.IsObject()) return;
     for (auto& map_pair : m_viewMap)
     {
         //Get index from map and find according line in state file
         ::std::wstring key = writerKey(map_pair.first);
 
-        if (m_document.FindMember(key.c_str()) != m_document.MemberEnd())
+        if (document.FindMember(key.c_str()) != document.MemberEnd())
         {
-            JsonStringValue& file_name = m_document[key.c_str()];
+            JsonStringValue& file_name = document[key.c_str()];
             map_pair.second.setFile(file_name.GetString());
         }
         else
         {
             map_pair.second.setFile(L"");
         }
-    }
+    } //end for
 }

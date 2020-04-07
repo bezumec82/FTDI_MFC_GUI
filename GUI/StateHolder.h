@@ -31,47 +31,23 @@ class StateHolder
         ::rapidjson::GenericStringBuffer<::rapidjson::UTF16<>>,
         ::rapidjson::UTF16<>, ::rapidjson::UTF16<>>;
 #endif
+    using JsonDocument = ::rapidjson::GenericDocument<::rapidjson::UTF16<>>;
+
 
 public: /*--- Construction ---*/
-    StateHolder()
-    {
-        if (openFile(FILE_NAME) != 0) return;
-        if (readFile() <= 0) return;
-        //const TCHAR json[] = L" { \"Writer #0\": \"H:/PROJECTS/FTDI/KTV_Cmd/SET_N15_RGBall_#0000FF.uio\" } "; //test
-        //if (m_document.Parse(json).HasParseError())
-        if (m_document.Parse(m_jsonData.GetString()).HasParseError())
-        {
-            ::std::cerr << "Can't parse input data" << std::endl;
-        }
-        else
-        {
-            ::std::cout << "Document was successfully parsed" << ::std::endl;
-        }
-    }
+    StateHolder();
 
 public: /*--- Methods ---*/
-    void registerWriter(UINT line_idx, ::OneLine::View& view)
-    {
-        m_viewMap.insert({ line_idx, view });
-    }
-
+    void registerWriter(UINT, ::OneLine::View&);
     void saveState();
     void restoreState();
 
 private: /*--- Implementation ---*/
-    ::std::wstring writerKey(UINT line_idx)
-    {
-        return ::std::wstring(L"Writer #")
-            + ::std::to_wstring(line_idx);
-    }
-
+    ::std::wstring writerKey(UINT);
     int32_t openFile(CString);
     int32_t readFile();
 
 private: /*--- Variables ---*/
-    ::rapidjson::GenericReader<::rapidjson::UTF16<>, ::rapidjson::UTF16<>> m_reader;
-    ::rapidjson::GenericDocument<::rapidjson::UTF16<>> m_document;
-
     ::std::unordered_map< UINT, ::OneLine::View& > m_viewMap;
     CString m_openedLogFile;
 

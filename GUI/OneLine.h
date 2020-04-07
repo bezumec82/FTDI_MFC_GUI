@@ -17,10 +17,8 @@ public:
 	{
 	public: /*--- Construction ---*/
 		View(OneLine& parent)
-			: m_parent_ref{parent}
-		{
-
-		}
+			: m_parent_ref{ parent }
+		{ }
 
 	public: /*--- Getters/Setters ---*/
 		const CString& getFile()
@@ -39,7 +37,7 @@ public:
 
 	private: /*--- Variables ---*/
 		OneLine& m_parent_ref;
-	};
+	}; //end class
 
 public:
 	OneLine(FTDI::FtdiHandler& ftdiHandler)
@@ -51,10 +49,6 @@ public:
 			::std::placeholders::_1, ::std::placeholders::_2));
 	}
 
-public: /*--- Methods ---*/
-	void writerCallBack(const ::FTDI::Writer::EventCode& errCode,
-		const ::FTDI::Writer::Data& data);
-
 public: /*--- Getters/Setters ---*/
 	View& view()
 	{
@@ -64,8 +58,11 @@ public: /*--- Getters/Setters ---*/
 private: /*--- Implementation ---*/
 	void getPeriod();
 	int32_t openFile(CString);
+	void writerCallBack(const ::FTDI::Writer::EventCode& errCode,
+		const ::FTDI::Writer::Data& data);
 
 public: /*--- Event handlers ---*/
+
 	void openHndlr();
 	void startStopHndlr();
 	void abort()
@@ -73,16 +70,14 @@ public: /*--- Event handlers ---*/
 		m_ftdiWriter.stop();
 	}
 
-
-
-private: /*--- Variables ---*/
+private: /*--- Logic variables ---*/
 	::FTDI::FtdiHandler& m_ftdiHandler_ref;
 	::FTDI::Writer m_ftdiWriter;
-public: /*--- Variables --- */
+	View m_view;
+
+public: /*--- GUI variables --- */
 	CEdit m_eBoxOpenedFPth;
 	CEdit m_eBoxSendPeriod;
 	CButton m_chBoxStartStop;
-	View m_view;
-
 };
 

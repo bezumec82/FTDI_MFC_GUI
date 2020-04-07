@@ -18,7 +18,6 @@ CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
 		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);
 		m_stateHolder.registerWriter(idx, m_oneLine_uptr_arr[idx]->view());
 	}
-
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
@@ -31,12 +30,13 @@ BOOL CMFCDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
+	/////////////////////
 	//Initialize captions
-
+	/////////////////////
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		(* m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
-		(*m_oneLine_uptr_arr[idx]).m_eBoxSendPeriod.SetWindowTextW(L"0");
+		( * m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+		( * m_oneLine_uptr_arr[idx] ).m_eBoxSendPeriod.SetWindowTextW(L"0");
 	}
 	m_eBoxImmRXrate.SetWindowTextW(L"0.0");
 	m_eBoxMedRXrate.SetWindowTextW(L"0.0");
@@ -55,9 +55,7 @@ void CMFCDlg::OnPaint()
 	if (IsIconic())
 	{
 		CPaintDC dc(this); // device context for painting
-
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
-
 		// Center icon in client rectangle
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
@@ -65,7 +63,6 @@ void CMFCDlg::OnPaint()
 		GetClientRect(&rect);
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
-
 		// Draw the icon
 		dc.DrawIcon(x, y, m_hIcon);
 	}
@@ -90,7 +87,6 @@ void CMFCDlg::OnClose()
 	::std::this_thread::sleep_for(::std::chrono::milliseconds(300));
 	CDialogEx::OnClose();
 }
-
 
 // The system calls this function to obtain the cursor to display while the user drags
 //  the minimized window.
