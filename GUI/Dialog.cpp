@@ -82,15 +82,9 @@ void CMFCDlg::OnClose()
 	::std::cout << "Stop all activity" << ::std::endl;
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		(*m_oneLine_uptr_arr[idx]).abort();
+		(*m_oneLine_uptr_arr[idx]).stop();
 	}
-#if(0)
-	if (m_ftdiLogger.isLogging())
-	{
-		m_ftdiLogger.stop();
-	}
-#endif
-
+	m_ftdiHandler.abort();
 	::std::this_thread::sleep_for(::std::chrono::milliseconds(300));
 	CDialogEx::OnClose();
 }

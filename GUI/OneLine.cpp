@@ -5,12 +5,17 @@
 /*--- Utilities ---*/
 /*-----------------*/
 
-void OneLine::getPeriod()
+CString OneLine::readPeriod()
 {
 
-	CString period_cstr;
-	m_eBoxSendPeriod.GetWindowText(period_cstr);
-	m_ftdiWriter.setPeriod(period_cstr);
+	CString period;
+	m_eBoxSendPeriod.GetWindowText(period);
+	return period;
+}
+
+void OneLine::writePeriod(const CString& period)
+{
+	m_eBoxSendPeriod.SetWindowTextW(period);
 }
 
 void OneLine::writerCallBack(const ::FTDI::Writer::EventCode& errCode,
@@ -73,6 +78,11 @@ void OneLine::openHndlr()
 	}
 }
 
+void OneLine::periodHndlr()
+{
+	m_ftdiWriter.setPeriod(readPeriod());
+}
+
 void OneLine::startStopHndlr()
 {
 	if (m_ftdiWriter.isWriting())
@@ -81,7 +91,7 @@ void OneLine::startStopHndlr()
 	}
 	else
 	{
-		getPeriod();
+		m_ftdiWriter.setPeriod(readPeriod());
 		m_ftdiWriter.start();
 	}
 }

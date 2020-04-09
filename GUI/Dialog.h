@@ -57,10 +57,7 @@ public: /*--- Event handlers ---*/
 	/*--- Event dispatchers ---*/
 	afx_msg void openDispatch(UINT nID);
 	afx_msg void startStopDispatch(UINT nID);
-
-	afx_msg void OnBnClickedSave();
-	afx_msg void OnChBoxStartStopSave();
-	//afx_msg void OnCheckedImmSave();
+	afx_msg void periodEboxDispatch(UINT nID);
 
 private: /*--- Helpers ---*/
 	::std::unique_ptr< OneLine > m_oneLine_uptr_arr[NUM_OF_SEND_LINES];
@@ -71,20 +68,12 @@ private: /*--- Control variables ---*/
 private: /*--- Utility variables ---*/
 	::FTDI::FtdiHandler m_ftdiHandler;
 
-private: /*--- Read from device ---*/
-#if(0)
-	::FTDI::Logger m_ftdiLogger;
-	void loggerCallBack(const ::FTDI::Logger::EventCode&,
-		const ::FTDI::Logger::Data&);
-	CEdit m_eBoxSaveFPth;
-	CEdit m_eBoxImmRXrate;
-	CEdit m_eBoxMedRXrate;
-	CButton m_chBoxStartStopSave;
-#endif
-
+private: /*--- Statistics ---*/
 	CEdit m_eBoxMedRXrate;
 	CEdit m_eBoxMedTXrate;
 
 private: /*--- Misc ---*/
 	StateHolder m_stateHolder;
+public:
+
 };

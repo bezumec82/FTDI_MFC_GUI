@@ -36,6 +36,7 @@ int32_t Logger::openFile()
     }
     ::std::wcout << "File " << m_saveFile.GetFilePath().GetString()
         << " successfully created/opened" << ::std::endl;
+	m_fileOpenedFlag.store(true);
     return 0;
 }
 
@@ -135,27 +136,43 @@ int32_t Logger::recvData(::std::vector<char>& buffer)
 	return 0;
 }
 
+void Logger::doLogging(::std::vector<char>& buffer)
+{
+	if (m_startStopLogging.load())
+	{
+		if (!m_fileOpenedFlag.load()) //open and write
+		{
+			if (openFile() == 0)
+			{
+				m_saveFile.Write(buffer.data(), buffer.size());
+				m_saveFile.Flush();
+			}
+		}
+		else //just write
+		{
+			m_saveFile.Write(buffer.data(), buffer.size());
+			m_saveFile.Flush();
+		}
+	}
+}
 
-INT Logger::doLogging()
+INT Logger::doReading()
 {
 	//define what to do
 	auto work = [&]() mutable
 	{
 		TimeStat time_stat;
 		time_stat.start();
-		m_isLogging.store(true);
-		while (m_startStopFlag.load())
+		m_isReading.store(true);
+		while (m_startStopReading.load())
 		{
 			::std::this_thread::sleep_for(\
 				::std::chrono::milliseconds(SAVE_PERIOD_MS));
 			::std::vector<char> buffer;
-			if (recvData(buffer) != 0)
-			{
-				break;
-			}
+			if (recvData(buffer) != 0) { break; }
 			if (buffer.empty()) continue;
-			m_saveFile.Write(buffer.data(), buffer.size());
-			m_saveFile.Flush();
+			doLogging(buffer);
+
 			notifyAll(EventCode::IMMEDIATE_RX_RATE,
 				Data{time_stat.getImmRXrate(buffer.size())});
 			notifyAll(EventCode::MEDIUM_RX_RATE,
@@ -163,11 +180,14 @@ INT Logger::doLogging()
 		}
 		closeDevice();
 		time_stat.stop();
-		m_saveFile.Flush();
-		m_saveFile.Close();
+		if (m_fileOpenedFlag.load())
+		{
+			m_saveFile.Flush();
+			m_saveFile.Close();
+		}
 		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data saving is stopped" << ::std::endl;
-		m_isLogging.store(false);
+		m_isReading.store(false);
 	};
 
 	//try to open device
@@ -195,27 +215,22 @@ failure:
 	return -1;
 }
 
-INT Logger::start()
+INT Logger::startReading()
 {
-	if (openFile() == 0)
+	m_startStopReading.store(true);
+	if (doReading() != 0)
 	{
-		m_startStopFlag.store(true);
-		if (doLogging() != 0)
-		{
-			::std::cerr << "Device logging is not started" << ::std::endl;
-			return -1;
-		}
-	}
-	else
-	{
+		::std::cerr << "Device logging is not started" << ::std::endl;
 		return -1;
 	}
 	return 0;
-
 }
+
 void Logger::stop()
 {
-    m_startStopFlag.store(false);
+
+	m_startStopReading.store(false);
+	m_startStopLogging.store(false);
 	notifyAll(EventCode::STOPPED, Data{});
-	while (isLogging());
+	while (isReading()); //wait for stop
 }

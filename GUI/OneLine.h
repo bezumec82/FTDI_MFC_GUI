@@ -21,20 +21,25 @@ public:
 		{ }
 
 	public: /*--- Getters/Setters ---*/
+		// Opened file
 		const CString& getFile()
 		{
 			return m_parent_ref.m_ftdiWriter.getFileName();
 		}
-		const int32_t getPeriod()
-		{
-			return m_parent_ref.m_ftdiWriter.getPerios();
-		}
-
-		void setFile(CString file_path)
+		void setFile(const CString& file_path)
 		{
 			m_parent_ref.openFile(file_path);
 		}
 
+		// Send period
+		CString getPeriod()
+		{
+			return m_parent_ref.readPeriod();
+		}
+		void setPeriod(const CString& period)
+		{
+			m_parent_ref.writePeriod(period);
+		}
 	private: /*--- Variables ---*/
 		OneLine& m_parent_ref;
 	}; //end class
@@ -56,7 +61,9 @@ public: /*--- Getters/Setters ---*/
 	}
 
 private: /*--- Implementation ---*/
-	void getPeriod();
+	CString readPeriod();
+	void writePeriod(const CString&);
+
 	int32_t openFile(CString);
 	void writerCallBack(const ::FTDI::Writer::EventCode& errCode,
 		const ::FTDI::Writer::Data& data);
@@ -64,8 +71,10 @@ private: /*--- Implementation ---*/
 public: /*--- Event handlers ---*/
 
 	void openHndlr();
+	void periodHndlr();
 	void startStopHndlr();
-	void abort()
+
+	void stop()
 	{
 		m_ftdiWriter.stop();
 	}

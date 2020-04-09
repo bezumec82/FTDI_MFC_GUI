@@ -21,8 +21,10 @@ int32_t StateHolder::openFile(CString file_path)
         return -1;
     }
     if (!m_stateFile.Open(file_path,
-        CFile::modeReadWrite | CFile::modeCreate
-        | CFile::modeNoTruncate | CFile::shareDenyWrite, &ex))
+        CFile::modeReadWrite
+        | CFile::modeCreate
+        | CFile::modeNoTruncate
+        | CFile::shareDenyWrite, &ex))
     {
         TCHAR szCause[255] = { 0 };
         ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
@@ -36,6 +38,8 @@ int32_t StateHolder::openFile(CString file_path)
         << " was opened" << ::std::endl;
     return 0;
 }
+
+
 
 int32_t StateHolder::readFile()
 {
@@ -65,19 +69,24 @@ void StateHolder::saveState()
     json_writer.StartObject();
     for (auto& map_pair : m_viewMap)
     {
-        ::std::wstring key = writerKey(map_pair.first);
-        json_writer.Key(key.c_str());
+        ::std::wstring key{ writerKey(map_pair.first + 1) + L" file" };
         CString file_name{ map_pair.second.getFile().GetString() };
-        //Json doesn't support shitty '\\'
-        file_name.Replace(L'\\', L'/');
+        file_name.Replace(L'\\', L'/');//Json doesn't support shitty '\\'
+
+        json_writer.Key(key.c_str());
         json_writer.String(file_name);
+
+        key = writerKey(map_pair.first + 1) + L" period";
+        CString period{ map_pair.second.getPeriod().GetString() };
+
+        json_writer.Key(key.c_str());
+        json_writer.String(period);
     }
-    json_writer.Key(L"Logger");
-    json_writer.String(m_openedLogFile.GetString());
     json_writer.Flush();
     json_writer.EndObject();
 
     m_stateFile.Seek(CFile::begin, 0);
+    m_stateFile.SetLength(0);
     m_stateFile.Write(json_buffer.GetString(), json_buffer.GetSize());
     m_stateFile.Flush();
 }
@@ -98,8 +107,7 @@ void StateHolder::restoreState()
     for (auto& map_pair : m_viewMap)
     {
         //Get index from map and find according line in state file
-        ::std::wstring key = writerKey(map_pair.first);
-
+        ::std::wstring key = writerKey(map_pair.first + 1) + L" file";
         if (document.FindMember(key.c_str()) != document.MemberEnd())
         {
             JsonStringValue& file_name = document[key.c_str()];
@@ -108,6 +116,13 @@ void StateHolder::restoreState()
         else
         {
             map_pair.second.setFile(L"");
+        }
+
+        key = writerKey(map_pair.first + 1) + L" period";
+        if (document.FindMember(key.c_str()) != document.MemberEnd())
+        {
+            JsonStringValue& period = document[key.c_str()];
+            map_pair.second.setPeriod(period.GetString());
         }
     } //end for
 }

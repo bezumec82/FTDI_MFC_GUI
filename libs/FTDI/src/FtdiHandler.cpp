@@ -22,6 +22,11 @@ void FtdiHandler::startScan()
     };
     m_future = ::std::async(::std::launch::async, work);
 }
+void FtdiHandler::stopScan()
+{
+    m_stopScan.store(true);
+}
+
 
 void FtdiHandler::startReadDev(Node& node)
 {
@@ -33,9 +38,10 @@ void FtdiHandler::startReadDev(Node& node)
 
     auto& logger = m_loggerMap.at(dev_description);
     logger.setFileName(utf8ToUtf16({ dev_description + ".uio" }).c_str());
-    if (logger.start() != 0)
+    if (logger.startReading() != 0)
     {
-        ::std::cerr << "Can't start loggind " << ::std::endl;
+        ::std::cerr << "Can't start logging of "
+            << dev_description << ::std::endl;
     }
 }
 
@@ -55,6 +61,25 @@ void FtdiHandler::stopReadDev(Node& node)
     {
         ::std::cout << "No device named : " << dev_description << ::std::endl;
     }
+}
+
+void FtdiHandler::stopLogging()
+{
+    for (auto& pair : m_loggerMap)
+    {
+        pair.second.stopLogging();
+    }
+}
+
+void FtdiHandler::abort()
+{
+    stopScan();
+    for (auto& pair : m_loggerMap)
+    {
+        pair.second.stopLogging();
+        pair.second.stop();
+    }
+    m_loggerMap.clear();
 }
 
 INT FtdiHandler::findFtdiDevices()
@@ -203,91 +228,28 @@ typedef struct _ft_device_list_info_node {
     } //end for
 }
 
-void FtdiHandler::setSelDev(::std::string desc)
+void FtdiHandler::setSelDev(::std::string dev_description)
 {
-    DevDescriptionMap::iterator new_sel_dev = m_devDescriptionMap.find(desc);
+    DevDescriptionMap::iterator new_sel_dev = m_devDescriptionMap.find(dev_description);
     if (new_sel_dev == m_devDescriptionMap.end())
     {
-        ::std::cerr << "Device isn't found" << ::std::endl;
-        findFtdiDevices(); //scan system
+        ::std::cerr << "Device '" << dev_description << "' isn't found" << ::std::endl;
+        return;
     }
-
-    //if (isLocked())
-    //{
-    //    closeSelDevice();
-    //}
+    notifyAll(EventCode::NEW_DEV_SELECTED, Data{});
+    stopLogging();
     m_selDev = new_sel_dev;
-    ::std::cout << "Selected device : " << desc << ::std::endl;
+    ::std::cout << "Selected device : " << dev_description << ::std::endl;
+    try
+    {
+        auto& logger = m_loggerMap.at(dev_description);
+        logger.startLoging();
+    }
+    catch (::std::out_of_range& oor)
+    {
+        ::std::cout << "No device named : " << dev_description << ::std::endl;
+    }
 }
-
-#if(0)
-int32_t FtdiHandler::openSelDevice()
-{
-    if (m_selDev == m_devDescriptionMap.end())
-    {
-        ::std::cerr << "Device isn't selected" << ::std::endl;
-        return -1;
-    }
-    if (isLocked())
-    {
-        m_devRefCntr++;
-        ::std::cout << "Device already opened" << ::std::endl;
-        return 0;
-    }
-
-    FT_STATUS ftdi_stat = FT_OpenEx(
-        m_selDev->second.SerialNumber,
-        FT_OPEN_BY_SERIAL_NUMBER,
-        &m_selDev->second.ftHandle);
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cout << "Can't open device : " << m_selDev->first << '\n'
-                    << "Error : " << ftdi_stat << ::std::endl;
-        return -1;
-    }
-    else
-    {
-        m_deviceIsLocked.store(true);
-        ::std::cout << "Opened device : " << m_selDev->first << ::std::endl;
-    }
-    ftdi_stat = FT_SetTimeouts(m_selDev->second.ftHandle, RX_TIMEOUT_MS, 0);
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cout << "Can't set RX timeout : "
-            << m_selDev->first << '\n'
-            << "Error : " << ftdi_stat << ::std::endl;
-        return -1;
-    }
-    return 0;
-}
-
-void FtdiHandler::closeSelDevice()
-{
-    if (m_devRefCntr != 0)
-    {
-        m_devRefCntr--;
-        ::std::cout << "Device stil in use" << ::std::endl;
-        return;
-    }
-    if (m_selDev == m_devDescriptionMap.end())
-    {
-        ::std::cerr << "Device isn't selected" << ::std::endl;
-        return;
-    }
-
-    FT_STATUS ftdi_stat = FT_Close(m_selDev->second.ftHandle);
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cerr << "Can't close device " << m_selDev->first << '\n'
-                    << "Error : " << ftdi_stat << ::std::endl;
-    }
-    else
-    {
-        ::std::cout << "Closed device : " << m_selDev->first << ::std::endl;
-    }
-    m_deviceIsLocked.store(false);
-}
-#endif
 
 int32_t FtdiHandler::sendData(::std::vector<char>& data)
 {

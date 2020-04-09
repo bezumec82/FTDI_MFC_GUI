@@ -33,6 +33,11 @@ class StateHolder
 #endif
     using JsonDocument = ::rapidjson::GenericDocument<::rapidjson::UTF16<>>;
 
+private: /*--- Nested facilities ---*/
+    struct State
+    {
+
+    };
 
 public: /*--- Construction ---*/
     StateHolder();
@@ -49,6 +54,7 @@ private: /*--- Implementation ---*/
 
 private: /*--- Variables ---*/
     ::std::unordered_map< UINT, ::OneLine::View& > m_viewMap;
+
     CString m_openedLogFile;
 
     CFile m_stateFile;

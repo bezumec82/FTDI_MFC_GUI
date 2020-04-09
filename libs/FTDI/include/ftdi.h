@@ -55,6 +55,7 @@ namespace FTDI
         {
             ALL_GOOD = 0,
             SCAN_DATA = 1,
+            NEW_DEV_SELECTED = 4,
         };
         using CallBack =
             void(const EventCode&, const Data&);
@@ -68,46 +69,32 @@ namespace FTDI
         }
 
     private: /*--- Implementation ----*/
-
         BOOL mergeDevsList(DevNodes& devs);
         void notifyAll(const EventCode&, const Data&);
         void startReadDev(Node&);
         void stopReadDev(Node&);
+        void stopScan();
 
     public: /*--- Methods ---*/
         static DevDescription makeDevDescription(Node&);
         void startScan();
         INT findFtdiDevices();
         void printFtdiDevices();
-        int32_t openDevice(Node&);
-#if(0)
-        int32_t openSelDevice();
-        void closeSelDevice();
-#endif
         int32_t sendData(::std::vector<char>&);
-        int32_t recvData(::std::vector<char>&);
-        int32_t clearRxBuf();
+        void stopLogging();
+        void abort();
 
-    public: /*--- Setters/Getters ---*/
         void registerCallBack(::std::function <CallBack> call_back)
         {
             m_callBacks.emplace_back(call_back);
         }
-        void stopScan()
-        {
-            m_stopScan.store(true);
-        }
         const DevDescription& getSelDev() const
         {
-            return m_selDev->first;
+            if (m_selDev != m_devDescriptionMap.end())
+                return m_selDev->first;
+            else return { "NOPE" };
         }
         void setSelDev(::std::string desc);
-#if(0)
-        bool isLocked()
-        {
-            return m_deviceIsLocked.load();
-        }
-#endif
         const DevDescriptions& getDevDescriptions() const
         {
             return m_devDescriptions;
@@ -128,11 +115,7 @@ namespace FTDI
         DevDescriptions m_devDescriptions;
         DevDescriptionMap m_devDescriptionMap;
 
-        //synchronization
-        //::std::atomic_bool m_deviceIsLocked{false};
         ::std::mutex m_sendMtx;
-        //uint32_t m_devRefCntr{ 0 };
-
     };
 
     class Logger
@@ -159,18 +142,35 @@ namespace FTDI
         {
             m_devDescription = FtdiHandler::makeDevDescription(node);
         }
+        ~Logger()
+        {
+            stop();
+        }
 
-    private:/*--- Methods ---*/
+    private:/*--- Implementation ---*/
         int32_t openFile();
         int32_t openDevice();
         void closeDevice();
         int32_t clearRxBuf();
         int32_t recvData(::std::vector<char>&);
         void notifyAll(const EventCode& , const Data&);
-        INT doLogging();
+        INT doReading();
+        void doLogging(::std::vector<char>&);
 
     public: /*--- Methods ---*/
-        INT start();
+        INT startReading();
+        bool isReading()
+        {
+            return m_isReading.load();
+        }
+        void startLoging()
+        {
+            m_startStopLogging.store(true);
+        }
+        void stopLogging()
+        {
+            m_startStopLogging.store(false);
+        }
         void stop();
 
     public: /*--- Getters/Setters ---*/
@@ -188,19 +188,22 @@ namespace FTDI
         {
             return m_fileName;
         }
-        bool isLogging()
-        {
-            return m_isLogging.load();
-        }
+
     private: /*--- Variables ---*/
         Node& m_node_ref;
         DevDescription m_devDescription;
         CString m_fileName;
         CFile m_saveFile;
-        ::std::atomic_bool m_startStopFlag{ false };
-        ::std::atomic_bool m_isLogging{ false };
         ::std::list< CallBack > m_callBacks;
         ::std::future<void> m_future;
+
+    private: /*--- Flags ---*/
+        ::std::atomic_bool m_startStopReading{ false };
+        ::std::atomic_bool m_isReading{ false };
+        ::std::atomic_bool m_fileOpenedFlag{ false };
+        ::std::atomic_bool m_startStopLogging{ false };
+
+
     };
 
     class Writer
@@ -225,7 +228,7 @@ namespace FTDI
             : m_ftdiHandler_ref{ ftdi_handler }
         {}
 
-    private: /*--- Methods ---*/
+    private: /*--- Implementation ---*/
         void notifyAll(const EventCode&, const Data&);
         void sendOnce();
         void doSend();
@@ -245,7 +248,11 @@ namespace FTDI
             return m_startStopFlag.load();
         }
         void setPeriod(CString& period);
-        int32_t getPerios()
+        void setPeriod(int32_t period)
+        {
+            m_period = period;
+        }
+        int32_t getPeriod()
         {
             return m_period;
         }
