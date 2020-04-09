@@ -2,12 +2,67 @@
 
 using namespace FTDI;
 
+void FtdiHandler::notifyAll(const EventCode& event,
+    const Data& data)
+{
+    for (const auto& func : m_callBacks)
+        func(event, data);
+}
+
+void FtdiHandler::startScan()
+{
+    m_stopScan.store(false);
+    auto work = [&]() mutable
+    {
+        while (!m_stopScan.load())
+        {
+            findFtdiDevices();
+            ::std::this_thread::sleep_for(::std::chrono::milliseconds(SCAN_PERIOD_MS));
+        }
+    };
+    m_future = ::std::async(::std::launch::async, work);
+}
+
+void FtdiHandler::startReadDev(Node& node)
+{
+    DevDescription dev_description = makeDevDescription(node);
+    m_loggerMap.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(dev_description),
+        std::forward_as_tuple(node));
+
+    auto& logger = m_loggerMap.at(dev_description);
+    logger.setFileName(utf8ToUtf16({ dev_description + ".uio" }).c_str());
+    if (logger.start() != 0)
+    {
+        ::std::cerr << "Can't start loggind " << ::std::endl;
+    }
+}
+
+void FtdiHandler::stopReadDev(Node& node)
+{
+    DevDescription dev_description = makeDevDescription(node);
+    try
+    {
+        auto& logger = m_loggerMap.at(dev_description);
+        logger.stop();
+        if (m_loggerMap.erase(dev_description) != 1)
+        {
+            ::std::cerr << "More than one element was erased" << ::std::endl;
+        }
+    }
+    catch (::std::out_of_range& oor)
+    {
+        ::std::cout << "No device named : " << dev_description << ::std::endl;
+    }
+}
+
 INT FtdiHandler::findFtdiDevices()
 {
     ////////////////////////////////////////////////
     // Form array of devices presented in the system
     ////////////////////////////////////////////////
-    ::std::cout << "Looking for the FTDI devices" << ::std::endl;
+    //::std::cout << "Looking for the FTDI devices" << ::std::endl;
     DWORD dev_ammnt;
     /* This call builds a device information list
     and returns the number of D2XX devices connected to the system. */
@@ -15,7 +70,7 @@ INT FtdiHandler::findFtdiDevices()
     if (ftdi_stat != FT_OK)
     {
         ::std::cerr << "Device enumeration failed. "
-                    << "Error code : "<< int(ftdi_stat) << ::std::endl;
+            << "Error code : " << int(ftdi_stat) << ::std::endl;
         m_devDescriptions.clear();
         return -1;
     }
@@ -32,12 +87,17 @@ INT FtdiHandler::findFtdiDevices()
     if (ftdi_stat != FT_OK)
     {
         ::std::cerr << "Gathering info about devices failed. "
-                    << "Error code : " << ftdi_stat << ::std::endl;
+            << "Error code : " << ftdi_stat << ::std::endl;
         m_devDescriptions.clear();
         return -1;
     }
-    mergeDevsList(nodes_tmp);
-    //TODO : call for registered callback that set new list of devices
+
+    if (mergeDevsList(nodes_tmp) == true)
+    {
+        //Indirect access to the resources of other objects
+        notifyAll(EventCode::SCAN_DATA, m_devDescriptions);
+    }
+
     return 0;
 }
 
@@ -46,13 +106,13 @@ DevDescription FtdiHandler::makeDevDescription(Node& node)
 {
     ::std::stringstream dev_description;
     dev_description << node.Description
-                    << " SN: " << node.SerialNumber
-                    << ::std::endl;
+                    << " SN: " << node.SerialNumber;
     return dev_description.str();
 }
 
-void FtdiHandler::mergeDevsList(DevNodes& devs)
+BOOL FtdiHandler::mergeDevsList(DevNodes& devs)
 {
+    BOOL changes = false;
     m_devDescriptions.clear();
     //Add new devices
     for (auto& new_dev : devs)
@@ -65,14 +125,15 @@ void FtdiHandler::mergeDevsList(DevNodes& devs)
         {
             ::std::cout << "Adding new device '" << dev_description
                 << "' to the map" << ::std::endl;
-            m_devDescriptionMap.insert({ ::std::move(dev_description), new_dev });
-            //TODO : create thread to read device constantly into the file
-
+            m_devDescriptionMap.insert({dev_description, new_dev });
+            changes = true;
+            //after all
+            startReadDev(m_devDescriptionMap.at(dev_description));
         }
         else //device present
         {
-            ::std::cout << "Device '" << dev_description
-                << "' already added" << ::std::endl;
+            //::std::cout << "Device '" << dev_description
+            //    << "' already added" << ::std::endl;
         }
     } //end for
 
@@ -87,21 +148,26 @@ void FtdiHandler::mergeDevsList(DevNodes& devs)
         {
             ::std::cout << "Device '" << dev_map_it->first
                 << "' was removed from the system" << ::std::endl;
+            //before all
+            stopReadDev(dev_map_it->second);
             if (dev_map_it == m_selDev)
             {
-                m_devRefCntr = 0;
-                closeSelDevice();
+                //m_devRefCntr = 0;
+                //closeSelDevice();
+                m_selDev = m_devDescriptionMap.end();
             }
             //Returns tterator following the last removed element
             dev_map_it = m_devDescriptionMap.erase(dev_map_it);
+            changes = true;
         }
         else
         {
-            ::std::cout << "Device '" << dev_map_it->first
-                << "' present" << ::std::endl;
+            //::std::cout << "Device '" << dev_map_it->first
+            //    << "' present" << ::std::endl;
             ++dev_map_it;
         }
     }
+    return changes;
 }
 
 void FtdiHandler::printFtdiDevices()
@@ -146,14 +212,15 @@ void FtdiHandler::setSelDev(::std::string desc)
         findFtdiDevices(); //scan system
     }
 
-    if (isLocked())
-    {
-        closeSelDevice();
-    }
+    //if (isLocked())
+    //{
+    //    closeSelDevice();
+    //}
     m_selDev = new_sel_dev;
     ::std::cout << "Selected device : " << desc << ::std::endl;
 }
 
+#if(0)
 int32_t FtdiHandler::openSelDevice()
 {
     if (m_selDev == m_devDescriptionMap.end())
@@ -220,8 +287,8 @@ void FtdiHandler::closeSelDevice()
     }
     m_deviceIsLocked.store(false);
 }
+#endif
 
-//Device must be opened before use this function
 int32_t FtdiHandler::sendData(::std::vector<char>& data)
 {
     FT_STATUS ftdi_stat = FT_OTHER_ERROR;
@@ -265,62 +332,4 @@ int32_t FtdiHandler::sendData(::std::vector<char>& data)
 
 }
 
-int32_t FtdiHandler::recvData(::std::vector<char>& buffer)
-{
-    DWORD EventDWord{ 0 };
-    DWORD TxBytes{ 0 }; DWORD RxBytes{ 0 };
-    DWORD BytesReceived{ 0 };
 
-    if (m_selDev == m_devDescriptionMap.end())
-    {
-        ::std::cerr << "Device isn't selected" << ::std::endl;
-        return -1;
-    }
-    if (m_selDev->second.ftHandle == nullptr)
-    {
-        ::std::cerr << "Device isn't opened" << ::std::endl;
-        return -1;
-    }
-
-    FT_STATUS ftdi_stat = FT_GetStatus(m_selDev->second.ftHandle,\
-        &RxBytes, &TxBytes, &EventDWord);
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cerr << "Can't get status from device : "
-            << m_selDev->first << '\n'
-            << "Error : " << ftdi_stat << ::std::endl;
-        return -1;
-    }
-    if (RxBytes <= 0)
-        return 0;
-    buffer.resize(RxBytes);
-    ftdi_stat = FT_Read(m_selDev->second.ftHandle,\
-        buffer.data(), buffer.size(), &BytesReceived);
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cerr << "Can't read data from the device "
-                    << m_selDev->first << '\n'
-                    << "Error : " << ftdi_stat << ::std::endl;
-        return -1;
-    }
-    if (BytesReceived != RxBytes)
-    {
-        ::std::cerr << "Error : " << BytesReceived
-                    << " bytes out of declared " << RxBytes
-                    << " is received" << ::std::endl;
-        return 0;
-    }
-    return 0;
-}
-
-int32_t FtdiHandler::clearRxBuf()
-{
-    FT_STATUS ftdi_stat = FT_Purge(m_selDev->second.ftHandle, FT_PURGE_RX );
-    if (ftdi_stat != FT_OK)
-    {
-        ::std::cerr << "Can't clear RX buffer of the device " << m_selDev->first << '\n'
-            << "Error : " << ftdi_stat << ::std::endl;
-        return -1;
-    }
-    return 0;
-}

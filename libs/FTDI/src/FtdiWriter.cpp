@@ -69,14 +69,18 @@ void Writer::stop()
 void Writer::sendOnce()
 {
 	::std::cout << "Sending once." << ::std::endl;
+#if(0)
 	if (m_ftdiHandler_ref.openSelDevice() != 0)
 	{
 		m_ftdiHandler_ref.closeSelDevice();
 		notifyAll(EventCode::FTDI_OPEN_ERR, Data{});
 		return;
 	}
+#endif
 	m_ftdiHandler_ref.sendData(m_fileDataBuf);
+#if(0)
 	m_ftdiHandler_ref.closeSelDevice();
+#endif
 	notifyAll(EventCode::STOPPED, Data{});
 	return;
 }
@@ -84,6 +88,7 @@ void Writer::sendOnce()
 void Writer::doSend()
 {
 	auto work = [&]() mutable {
+#if(0)
 		//try to open device
 		if (m_ftdiHandler_ref.openSelDevice() != 0)
 		{
@@ -91,6 +96,7 @@ void Writer::doSend()
 			notifyAll(EventCode::FTDI_OPEN_ERR, Data{});
 			return;
 		}
+#endif
 		::std::cout << "Start sending data to the device "
 			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
 		m_startStopFlag.store(true);
@@ -101,7 +107,9 @@ void Writer::doSend()
 			::std::this_thread::sleep_for(::std::chrono::milliseconds(m_period));
 		}
 		m_startStopFlag.store(false);
+#if(0)
 		m_ftdiHandler_ref.closeSelDevice();
+#endif
 		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
 	};

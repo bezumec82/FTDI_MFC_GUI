@@ -7,12 +7,14 @@
 
 
 CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent),
-	m_ftdiLogger( m_ftdiHandler )
+	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent)
+	//,m_ftdiLogger( m_ftdiHandler )
 {
+#if(0)
 	m_ftdiLogger.registerCallBack(
 		::std::bind(&CMFCDlg::loggerCallBack, this,
 		::std::placeholders::_1, ::std::placeholders::_2) );
+#endif
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
 		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);
@@ -37,11 +39,15 @@ BOOL CMFCDlg::OnInitDialog()
 		( * m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
 		( * m_oneLine_uptr_arr[idx] ).m_eBoxSendPeriod.SetWindowTextW(L"0");
 	}
+#if(0)
 	m_eBoxImmRXrate.SetWindowTextW(L"0.0");
 	m_eBoxMedRXrate.SetWindowTextW(L"0.0");
+#endif
 	//autoscan
-	OnBnClickedScan();
 	m_stateHolder.restoreState();
+	m_ftdiHandler.registerCallBack(::std::bind(&CMFCDlg::ftdiCallBack, this,
+		::std::placeholders::_1, ::std::placeholders::_2));
+	m_ftdiHandler.startScan();
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -78,10 +84,12 @@ void CMFCDlg::OnClose()
 	{
 		(*m_oneLine_uptr_arr[idx]).abort();
 	}
+#if(0)
 	if (m_ftdiLogger.isLogging())
 	{
 		m_ftdiLogger.stop();
 	}
+#endif
 
 	::std::this_thread::sleep_for(::std::chrono::milliseconds(300));
 	CDialogEx::OnClose();

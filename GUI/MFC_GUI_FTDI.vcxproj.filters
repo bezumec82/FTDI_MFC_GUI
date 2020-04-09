@@ -16,7 +16,9 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StateHolder.cpp" />
+    <ClCompile Include="StateHolder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OneLine.h">
@@ -40,7 +42,9 @@
     <ClInclude Include="Resource.h">
       <Filter>GUI</Filter>
     </ClInclude>
-    <ClInclude Include="StateHolder.h" />
+    <ClInclude Include="StateHolder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -68,5 +72,8 @@
     <None Include="..\.gitignore">
       <Filter>GIT</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\MFC.ico" />
   </ItemGroup>
 </Project>

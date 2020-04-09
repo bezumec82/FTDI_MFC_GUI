@@ -48,7 +48,10 @@ protected: /*--- Basic part ---*/
 	DECLARE_MESSAGE_MAP()
 
 public: /*--- Event handlers ---*/
-	afx_msg void OnBnClickedScan();
+	::FTDI::FtdiHandler::CallBack ftdiCallBack;
+
+	//afx_msg void OnBnClickedScan();
+	afx_msg void OnBnClickedStop();
 	afx_msg void OnCbnSelchangeCombo();
 
 	/*--- Event dispatchers ---*/
@@ -69,6 +72,7 @@ private: /*--- Utility variables ---*/
 	::FTDI::FtdiHandler m_ftdiHandler;
 
 private: /*--- Read from device ---*/
+#if(0)
 	::FTDI::Logger m_ftdiLogger;
 	void loggerCallBack(const ::FTDI::Logger::EventCode&,
 		const ::FTDI::Logger::Data&);
@@ -76,6 +80,10 @@ private: /*--- Read from device ---*/
 	CEdit m_eBoxImmRXrate;
 	CEdit m_eBoxMedRXrate;
 	CButton m_chBoxStartStopSave;
+#endif
+
+	CEdit m_eBoxMedRXrate;
+	CEdit m_eBoxMedTXrate;
 
 private: /*--- Misc ---*/
 	StateHolder m_stateHolder;

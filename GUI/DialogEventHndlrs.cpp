@@ -6,8 +6,9 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_WM_CLOSE()
 
-	ON_BN_CLICKED(ID_BT_SCAN, &CMFCDlg::OnBnClickedScan)
+	//ON_BN_CLICKED(ID_BT_SCAN, &CMFCDlg::OnBnClickedScan)
 	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
+	ON_BN_CLICKED(ID_BT_STOP_READ, &CMFCDlg::OnBnClickedStop)
 
 	ON_COMMAND_RANGE(
 		ID_BT_OPEN_1, ID_BT_OPEN_20,
@@ -16,9 +17,9 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 		IDC_CHBOX_START_STOP_1, IDC_CHBOX_START_STOP_20,
 		startStopDispatch)
 
-	ON_BN_CLICKED(ID_BT_SAVE, &CMFCDlg::OnBnClickedSave)
-	ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE,
-		&CMFCDlg::OnChBoxStartStopSave)
+	//ON_BN_CLICKED(ID_BT_SAVE, &CMFCDlg::OnBnClickedSave)
+	//ON_BN_CLICKED(IDC_CHBOX_START_STOP_SAVE,
+	//	&CMFCDlg::OnChBoxStartStopSave)
 END_MESSAGE_MAP()
 
 void CMFCDlg::DoDataExchange(CDataExchange* pDX)
@@ -36,23 +37,25 @@ void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 			(*m_oneLine_uptr_arr[idx]).m_chBoxStartStop);
 	}
 
-	DDX_Control(pDX, IDC_EBOX_SAVE_FILE, m_eBoxSaveFPth);
-	DDX_Control(pDX, IDC_CHBOX_START_STOP_SAVE, m_chBoxStartStopSave);
-	DDX_Control(pDX, IDC_EBOX_IMM_RX_RATE, m_eBoxImmRXrate);
+	//DDX_Control(pDX, IDC_EBOX_SAVE_FILE, m_eBoxSaveFPth);
+	//DDX_Control(pDX, IDC_CHBOX_START_STOP_SAVE, m_chBoxStartStopSave);
+	//DDX_Control(pDX, IDC_EBOX_IMM_RX_RATE, m_eBoxImmRXrate);
+
 	DDX_Control(pDX, IDC_EBOX_MED_RX_RATE, m_eBoxMedRXrate);
+	DDX_Control(pDX, IDC_EBOX_MED_TX_RATE, m_eBoxMedTXrate);
 }
 
+#if(0)
 void CMFCDlg::OnBnClickedScan()
 {
 	if (!m_ftdiHandler.findFtdiDevices())
 		m_ftdiHandler.printFtdiDevices();
-	//fill combo box
-	m_cBoxDevices.ResetContent();
-	const ::FTDI::DevDescriptions& dev_descs = m_ftdiHandler.getDevDescriptions();
-	for (const ::std::string& desc : dev_descs)
-	{
-		m_cBoxDevices.AddString(CString{ desc.c_str() });
-	}
+}
+#endif
+
+void CMFCDlg::OnBnClickedStop()
+{
+
 }
 
 void CMFCDlg::OnCbnSelchangeCombo()
@@ -92,6 +95,7 @@ void CMFCDlg::startStopDispatch(UINT nID)
 	}
 }
 
+#if(0)
 void CMFCDlg::OnBnClickedSave()
 {
 	CFileDialog dlgFile(FALSE); //save file
@@ -104,6 +108,7 @@ void CMFCDlg::OnBnClickedSave()
 		m_eBoxSaveFPth.SetWindowTextW(file.GetFileName());
 	}
 }
+
 
 void CMFCDlg::loggerCallBack(const ::FTDI::Logger::EventCode& errCode,
 	const ::FTDI::Logger::Data& data)
@@ -146,4 +151,24 @@ void CMFCDlg::OnChBoxStartStopSave()
 		m_ftdiLogger.stop();
 	}
 	else m_ftdiLogger.start();
+}
+#endif
+void CMFCDlg::ftdiCallBack(const ::FTDI::FtdiHandler::EventCode& event,
+	const ::FTDI::FtdiHandler::Data& data)
+{
+	switch (event)
+	{
+	case ::FTDI::FtdiHandler::EventCode::SCAN_DATA:
+	{
+		//re-fill combo box
+		m_cBoxDevices.ResetContent();
+		::FTDI::DevDescriptions dev_descs = ::std::get<::FTDI::DevDescriptions>(data);
+		for (const ::std::string& desc : dev_descs)
+		{
+			m_cBoxDevices.AddString(CString{ desc.c_str() });
+		}
+		break;
+	}
+
+	}
 }
