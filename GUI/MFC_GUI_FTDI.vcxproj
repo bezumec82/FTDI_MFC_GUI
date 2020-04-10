@@ -79,21 +79,25 @@
     <LinkIncremental>false</LinkIncremental>
     <IntDir>../out/$(Platform)/$(Configuration)/tmp/</IntDir>
     <OutDir>../out/$(Platform)/$(Configuration)/</OutDir>
+    <TargetName>UIO2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../out/$(Platform)/$(Configuration)/</OutDir>
     <IntDir>../out/$(Platform)/$(Configuration)/tmp/</IntDir>
+    <TargetName>UIO2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IntDir>../out/$(Platform)/$(Configuration)/tmp/</IntDir>
     <OutDir>../out/$(Platform)/$(Configuration)/</OutDir>
+    <TargetName>UIO2</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../out/$(Platform)/$(Configuration)/</OutDir>
     <IntDir>../out/$(Platform)/$(Configuration)/tmp/</IntDir>
+    <TargetName>UIO2</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

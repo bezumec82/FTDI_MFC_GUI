@@ -37,6 +37,8 @@ int32_t Logger::openFile()
     ::std::wcout << "File " << m_saveFile.GetFilePath().GetString()
         << " successfully created/opened" << ::std::endl;
 	m_fileOpenedFlag.store(true);
+	//Seek to the end
+	m_saveFile.SeekToEnd();
     return 0;
 }
 
