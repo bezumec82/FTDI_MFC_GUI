@@ -52,7 +52,7 @@ public: /*--- Event handlers ---*/
 
 	//afx_msg void OnBnClickedScan();
 	afx_msg void OnBnClickedStop();
-	afx_msg void OnCbnSelchangeCombo();
+	afx_msg void OnCBoxSelDev();
 
 	/*--- Event dispatchers ---*/
 	afx_msg void openDispatch(UINT nID);
@@ -69,7 +69,7 @@ private: /*--- Utility variables ---*/
 	::FTDI::FtdiHandler m_ftdiHandler;
 
 private: /*--- Statistics ---*/
-	CEdit m_eBoxMedRXrate;
+	CEdit m_eBoxgetMedByteRate;
 	CEdit m_eBoxMedTXrate;
 
 private: /*--- Misc ---*/

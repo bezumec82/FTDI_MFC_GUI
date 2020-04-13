@@ -33,8 +33,8 @@ int32_t Writer::readFile()
 	m_sendFile.Close();
 	if (bytesRead > 0)
 	{
-		::std::cout << "Data from file '"
-			<< utf16ToUtf8(m_fileName.GetString())
+		::std::wcout << "Data from file '"
+			<< m_sendFile.GetFilePath().GetString()
 			<< "' is stored." << ::std::endl;
 		return 0;
 	}
@@ -62,56 +62,38 @@ void Writer::setPeriod(CString& period)
 
 void Writer::stop()
 {
-	m_startStopFlag.store(false);
-	notifyAll(EventCode::STOPPED, Data{});
+	m_stopSending.store(true);
+	while (isSending());
 }
 
 void Writer::sendOnce()
 {
 	::std::cout << "Sending once." << ::std::endl;
-#if(0)
-	if (m_ftdiHandler_ref.openSelDevice() != 0)
-	{
-		m_ftdiHandler_ref.closeSelDevice();
-		notifyAll(EventCode::FTDI_OPEN_ERR, Data{});
-		return;
-	}
-#endif
-	m_ftdiHandler_ref.sendData(m_fileDataBuf);
-#if(0)
-	m_ftdiHandler_ref.closeSelDevice();
-#endif
-	notifyAll(EventCode::STOPPED, Data{});
+	m_sendingOnce.store(true);
 	return;
 }
 
 void Writer::doSend()
 {
 	auto work = [&]() mutable {
-#if(0)
-		//try to open device
-		if (m_ftdiHandler_ref.openSelDevice() != 0)
-		{
-			m_ftdiHandler_ref.closeSelDevice(); //try to fix situation
-			notifyAll(EventCode::FTDI_OPEN_ERR, Data{});
-			return;
-		}
-#endif
 		::std::cout << "Start sending data to the device "
 			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
-		m_startStopFlag.store(true);
-		while (m_startStopFlag.load() == true)
+		m_isSending.store(true);
+		while (m_stopSending.load() == false)
 		{
-			if (m_ftdiHandler_ref.sendData(m_fileDataBuf) != 0)
-				break;
+			if (m_ftdiHandler_ref.sendFile(\
+				m_fileName, m_stopSending) != 0) { break; }
 			::std::this_thread::sleep_for(::std::chrono::milliseconds(m_period));
-		}
-		m_startStopFlag.store(false);
-#if(0)
-		m_ftdiHandler_ref.closeSelDevice();
-#endif
+			if (m_sendingOnce.load())
+			{
+				m_sendingOnce.store(false);
+				break;
+			}
+		}//end while - future destructor here
+		m_isSending.store(false);
 		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
+		MessageBeep(MB_ABORTRETRYIGNORE);
 	};
 	m_future = ::std::async(std::launch::async, work);
 }
@@ -125,18 +107,7 @@ void Writer::start()
 		notifyAll(EventCode::NO_PERIOD_ERR, Data{});
 		return;
 	}
-
-	if (m_fileDataBuf.empty())
-	{
-		::std::cerr << "No data to send. "
-			<< "Can't start sending." << ::std::endl;
-		notifyAll(EventCode::NO_DATA_ERR, Data{});
-		return;
-	}
-	if (m_period == 0)
-	{
-		sendOnce();
-		return;
-	}
+	m_stopSending.store(false);
+	if (m_period == 0) { sendOnce(); }
 	doSend();
 }

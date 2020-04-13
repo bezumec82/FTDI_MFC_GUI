@@ -6,7 +6,7 @@ BEGIN_MESSAGE_MAP(CMFCDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_WM_CLOSE()
 
-	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCbnSelchangeCombo)
+	ON_CBN_SELCHANGE(IDC_SCAN_COMBO, &CMFCDlg::OnCBoxSelDev)
 	ON_BN_CLICKED(ID_BT_STOP_READ, &CMFCDlg::OnBnClickedStop)
 
 	ON_COMMAND_RANGE(
@@ -38,7 +38,7 @@ void CMFCDlg::DoDataExchange(CDataExchange* pDX)
 		DDX_Control(pDX, IDC_CHBOX_START_STOP_1 + idx,
 			(*m_oneLine_uptr_arr[idx]).m_chBoxStartStop);
 	}
-	DDX_Control(pDX, IDC_EBOX_MED_RX_RATE, m_eBoxMedRXrate);
+	DDX_Control(pDX, IDC_EBOX_MED_RX_RATE, m_eBoxgetMedByteRate);
 	DDX_Control(pDX, IDC_EBOX_MED_TX_RATE, m_eBoxMedTXrate);
 }
 
@@ -47,7 +47,7 @@ void CMFCDlg::OnBnClickedStop()
 	m_ftdiHandler.stopLogging();
 }
 
-void CMFCDlg::OnCbnSelchangeCombo()
+void CMFCDlg::OnCBoxSelDev()
 {
 	CString sel_device;
 	m_cBoxDevices.GetLBText(m_cBoxDevices.GetCurSel(), sel_device);

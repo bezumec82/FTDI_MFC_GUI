@@ -20,13 +20,13 @@ void FtdiHandler::startScan()
             ::std::this_thread::sleep_for(::std::chrono::milliseconds(SCAN_PERIOD_MS));
         }
     };
-    m_future = ::std::async(::std::launch::async, work);
+    m_scanFuture = ::std::async(::std::launch::async, work);
 }
+
 void FtdiHandler::stopScan()
 {
     m_stopScan.store(true);
 }
-
 
 void FtdiHandler::startReadDev(Node& node)
 {
@@ -35,13 +35,22 @@ void FtdiHandler::startReadDev(Node& node)
         std::piecewise_construct,
         std::forward_as_tuple(dev_description),
         std::forward_as_tuple(node));
-
-    auto& logger = m_loggerMap.at(dev_description);
-    logger.setFileName(utf8ToUtf16({ dev_description + ".uio" }).c_str());
-    if (logger.startReading() != 0)
+    try
     {
-        ::std::cerr << "Can't start logging of "
-            << dev_description << ::std::endl;
+        auto& logger = m_loggerMap.at(dev_description);
+        logger.setFileName(utf8ToUtf16({ dev_description + ".uio" }).c_str());
+        if (logger.startReading() != 0)
+        {
+            ::std::cerr << "Can't start logging of "
+                << dev_description << ::std::endl;
+#if(0)
+            m_loggerMap.errase(dev_description);
+#endif
+        }
+    }
+    catch (const ::std::out_of_range& oor)
+    {
+        ::std::wcerr << "Error creating logger map entry" << ::std::endl;
     }
 }
 
@@ -80,6 +89,8 @@ void FtdiHandler::abort()
         pair.second.stop();
     }
     m_loggerMap.clear();
+    stopSending();
+    while (isSending());
 }
 
 INT FtdiHandler::findFtdiDevices()
@@ -137,7 +148,7 @@ DevDescription FtdiHandler::makeDevDescription(Node& node)
 
 BOOL FtdiHandler::mergeDevsList(DevNodes& devs)
 {
-    BOOL changes = false;
+    BOOL changes = FALSE;
     m_devDescriptions.clear();
     //Add new devices
     for (auto& new_dev : devs)
@@ -151,14 +162,16 @@ BOOL FtdiHandler::mergeDevsList(DevNodes& devs)
             ::std::cout << "Adding new device '" << dev_description
                 << "' to the map" << ::std::endl;
             m_devDescriptionMap.insert({dev_description, new_dev });
-            changes = true;
+            changes = TRUE;
             //after all
             startReadDev(m_devDescriptionMap.at(dev_description));
         }
         else //device present
         {
-            //::std::cout << "Device '" << dev_description
-            //    << "' already added" << ::std::endl;
+#if(DEBUG_MERGE)
+            ::std::cout << "Device '" << dev_description
+                << "' already added" << ::std::endl;
+#endif
         }
     } //end for
 
@@ -177,18 +190,18 @@ BOOL FtdiHandler::mergeDevsList(DevNodes& devs)
             stopReadDev(dev_map_it->second);
             if (dev_map_it == m_selDev)
             {
-                //m_devRefCntr = 0;
-                //closeSelDevice();
                 m_selDev = m_devDescriptionMap.end();
             }
-            //Returns tterator following the last removed element
+            //Returns iterator following the last removed element
             dev_map_it = m_devDescriptionMap.erase(dev_map_it);
-            changes = true;
+            changes = TRUE;
         }
         else
         {
-            //::std::cout << "Device '" << dev_map_it->first
-            //    << "' present" << ::std::endl;
+#if(DEBUG_MERGE)
+            ::std::cout << "Device '" << dev_map_it->first
+                << "' present" << ::std::endl;
+#endif
             ++dev_map_it;
         }
     }
@@ -238,6 +251,9 @@ void FtdiHandler::setSelDev(::std::string dev_description)
     }
     notifyAll(EventCode::NEW_DEV_SELECTED, Data{});
     stopLogging();
+    m_stopSend.store(true);
+    while (isSending());
+
     m_selDev = new_sel_dev;
     ::std::cout << "Selected device : " << dev_description << ::std::endl;
     try
@@ -251,7 +267,7 @@ void FtdiHandler::setSelDev(::std::string dev_description)
     }
 }
 
-int32_t FtdiHandler::sendData(::std::vector<char>& data)
+INT FtdiHandler::sendData(::std::vector<char>& data)
 {
     FT_STATUS ftdi_stat = FT_OTHER_ERROR;
     DWORD BytesWritten = 0;
@@ -272,11 +288,8 @@ int32_t FtdiHandler::sendData(::std::vector<char>& data)
         return -1;
     }
 
-    {
-        ::std::unique_lock<::std::mutex> u_lock(m_sendMtx);
         ftdi_stat = FT_Write(m_selDev->second.ftHandle,\
             data.data(), data.size(), &BytesWritten);
-    }
     if (ftdi_stat != FT_OK)
     {
         ::std::cerr << "Can't send data to the device " << m_selDev->first << '\n'
@@ -290,8 +303,153 @@ int32_t FtdiHandler::sendData(::std::vector<char>& data)
                     << "is written" << ::std::endl;
         return -1;
     }
-    return 0;
-
+    return BytesWritten;
 }
 
+INT FtdiHandler::openFile(CString& file_name, CFile& file)
+{
+    if (file_name.IsEmpty())
+    {
+        ::std::cerr << "File to save is not set" << ::std::endl;
+        return -1;
+    }
+    CFileException ex;
+    if (!file.Open(file_name,
+        CFile::modeRead
+        | CFile::shareDenyNone, &ex))
+    {
+        TCHAR szCause[255] = { 0 };
+        ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
+        ::std::wcout << "Can't open file "
+            << file.GetFilePath().GetString() << '\n'
+            << "Error : " << szCause << ::std::endl;
+        return -1;
+    }
+#if(0)
+    ::std::wcout << "File " << file.GetFilePath().GetString()
+        << " was successfully opened" << ::std::endl;
+#endif
+    return 0;
+}
 
+void FtdiHandler::stopSending()
+{
+    m_stopSend.store(true);
+}
+
+INT FtdiHandler::sendFile(CString& file_name, \
+    ::std::atomic_bool& stop_from_thread)
+{
+    DWORD ftdiEvent{ 0 };
+    DWORD txQueueSize{ 0 }; DWORD rxQueueSize{ 0 };
+    CFile file;
+    ULONGLONG file_size{ 0 };
+    Buffer buffer;
+    FT_STATUS ftdi_stat = FT_OTHER_ERROR;
+    UINT bytesRead{ 0 };
+    UINT bytesToSend{ 0 };
+    TimeStat time_stat;
+
+#if(0)
+    ::std::unique_lock<::std::mutex> m_lock{ m_devMtx, std::try_to_lock };
+    if (!m_lock.owns_lock())
+    {
+        ::std::cerr << "Busy" << ::std::endl;
+        return -1;
+    }
+#endif
+
+    if (file_name.IsEmpty())
+    {
+        ::std::cerr << "File name isn't provided" << ::std::endl;
+        return -1;
+    }
+    if (openFile(file_name, file) != 0) { return -1; }
+    file_size = file.GetLength(); //find how big is file
+    if (!file_size)
+    {
+        ::std::wcerr << "File " << file.GetFilePath().GetString()
+            << " is empty" << ::std::endl;
+        goto failure;
+    }
+    m_isSending.store(true); //used in device selection
+    m_stopSend.store(false);
+    time_stat.start();
+
+    ::std::cout << "Task " << m_sendTaskCounter++
+        << " started" << ::std::endl;
+    while (!m_devMtx.try_lock())
+    {
+        ::std::this_thread::sleep_for(\
+            ::std::chrono::milliseconds(LOCK_TIMEOUT_MS));
+        if (stop_from_thread.load() == true)
+        {
+            ::std::wcout << "Task " << m_sendTaskCounter--
+                << " dismissed" << ::std::endl;
+            return -1;
+        }
+    }
+
+    while ( (file_size > 0) \
+        && (m_stopSend.load() == false) //TODO : optimize out
+        && (stop_from_thread.load() == false) )
+    {
+        //find how many bytes we can send without block
+        if (m_selDev == m_devDescriptionMap.end())
+        {
+            ::std::cerr << "Device isn't selected" << ::std::endl;
+            goto failure;
+        }
+        if (m_selDev->second.ftHandle == nullptr)
+        {
+            ::std::cerr << "Device isn't opened" << ::std::endl;
+            goto failure;
+        }
+
+        ftdi_stat = FT_GetStatus(m_selDev->second.ftHandle, \
+            & rxQueueSize, &txQueueSize, &ftdiEvent);
+        if (ftdi_stat != FT_OK)
+        {
+            ::std::cerr << "Can't get status from device : "
+                << m_selDev->first << '\n'
+                << "Error : " << ftdi_stat << ::std::endl;
+            goto failure;
+        }
+        if (txQueueSize > 0)
+        {
+            UINT ms_delay = UINT(double(txQueueSize) * 1000.0 / SEND_SPEED_BYTES_PER_SEC);
+            ::std::this_thread::sleep_for(::std::chrono::milliseconds(ms_delay));
+            continue;
+        }
+
+        bytesToSend = file_size > SEND_CHUNK ? SEND_CHUNK : file_size;
+        buffer.resize(bytesToSend);
+        bytesRead = file.Read(\
+            buffer.data(), buffer.size());
+        if (!bytesRead)
+        {
+            ::std::wcerr << "No data was read from the file : "
+                << file.GetFilePath().GetString() << ::std::endl;
+            goto failure;
+        }
+        if (sendData(buffer) < 0) { break; }
+        file_size -= bytesToSend;
+        time_stat.touchByteRate(bytesToSend);
+        notifyAll(EventCode::MEDIUM_TX_RATE, Data{ time_stat.getMedByteRate() });
+    } //end while
+    //normal exit
+    m_devMtx.unlock();
+    m_isSending.store(false);
+    file.Close();
+    ::std::wcout << "Task " << m_sendTaskCounter-- << " finished" << ::std::endl;
+    return 0;
+
+failure:
+    m_devMtx.unlock();
+    m_isSending.store(false);
+    file.Close();
+    ::std::wcout << "Task " << m_sendTaskCounter-- << " failed" << ::std::endl;
+    return -1;
+}
+
+/* EOF */

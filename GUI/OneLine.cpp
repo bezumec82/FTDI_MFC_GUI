@@ -54,15 +54,8 @@ int32_t OneLine::openFile(CString file_path)
 		return -1;
 	}
 	m_ftdiWriter.setFileName(file_path);
-	if (m_ftdiWriter.readFile() == 0)
-	{
-		CFile file(file_path, CFile::modeRead);
-		m_eBoxOpenedFPth.SetWindowTextW(file.GetFileName());
-	}
-	else
-	{
-		return -1;
-	}
+	CFile file(file_path, CFile::modeRead | CFile::shareDenyNone );
+	m_eBoxOpenedFPth.SetWindowTextW(file.GetFileName());
 	return 0;
 }
 
@@ -85,7 +78,7 @@ void OneLine::periodHndlr()
 
 void OneLine::startStopHndlr()
 {
-	if (m_ftdiWriter.isWriting())
+	if (m_ftdiWriter.isSending())
 	{
 		m_ftdiWriter.stop();
 	}

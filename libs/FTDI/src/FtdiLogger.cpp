@@ -29,13 +29,12 @@ int32_t Logger::openFile()
 		ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
 		::std::wcout << "Can't create/open file "
 			<< m_saveFile.GetFilePath().GetString() << '\n'
-			<< "Error : " << szCause
-			<< ::std::endl;
+			<< "Error : " << szCause << ::std::endl;
         notifyAll(EventCode::FOPEN_ERR, Data{} );
         return -1;
     }
     ::std::wcout << "File " << m_saveFile.GetFilePath().GetString()
-        << " successfully created/opened" << ::std::endl;
+        << " was successfully created/opened" << ::std::endl;
 	m_fileOpenedFlag.store(true);
 	//Seek to the end
 	m_saveFile.SeekToEnd();
@@ -174,11 +173,12 @@ INT Logger::doReading()
 			if (recvData(buffer) != 0) { break; }
 			if (buffer.empty()) continue;
 			doLogging(buffer);
-
-			notifyAll(EventCode::IMMEDIATE_RX_RATE,
-				Data{time_stat.getImmRXrate(buffer.size())});
-			notifyAll(EventCode::MEDIUM_RX_RATE,
-				Data{time_stat.getMedRXrate(buffer.size())});
+			time_stat.touchByteRate(buffer.size());
+			if (m_isSelectedDev.load())
+			{
+				notifyAll(EventCode::MEDIUM_RX_RATE,
+					Data{ time_stat.getMedByteRate() });
+			}
 		}
 		closeDevice();
 		time_stat.stop();

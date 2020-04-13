@@ -25,9 +25,15 @@
 #include "Utilities.h"
 #include "TimeStat.h"
 
-#define RX_TIMEOUT_MS   100
-#define SAVE_PERIOD_MS  100
-#define SCAN_PERIOD_MS  1000
+#define RX_TIMEOUT_MS               100
+#define SAVE_PERIOD_MS              100
+#define SCAN_PERIOD_MS              1000
+#define SEND_CHUNK                  UINT(16*1024)
+#define SEND_SPEED_BYTES_PER_SEC    10000.0
+#define LOCK_TIMEOUT_MS             50
+
+
+#define DEBUG_MERGE     FALSE
 
 namespace FTDI
 {
@@ -46,16 +52,22 @@ namespace FTDI
     class FtdiHandler
     {
     public: /*--- Aliaces ---*/
-        using Data = ::std::variant<DevDescriptions>;
+        using Data = ::std::variant<
+            DevDescriptions, /* to CBox */
+            CString /* TX rate */
+        >;
         using DevDescriptionMap = ::std::unordered_map< DevDescription, Node >;
         using LoggerMap = ::std::unordered_map< DevDescription, Logger >;
+        using AsyncResult = ::std::future<void>;
+        using Buffer = ::std::vector<char>;
 
     public: /*--- Enumerators ---*/
         enum class EventCode : int8_t
         {
             ALL_GOOD = 0,
             SCAN_DATA = 1,
-            NEW_DEV_SELECTED = 4,
+            NEW_DEV_SELECTED = 2,
+            MEDIUM_TX_RATE = 3,
         };
         using CallBack =
             void(const EventCode&, const Data&);
@@ -74,21 +86,25 @@ namespace FTDI
         void startReadDev(Node&);
         void stopReadDev(Node&);
         void stopScan();
+        INT openFile(CString&, CFile&);
+        INT sendData(::std::vector<char>&);
 
     public: /*--- Methods ---*/
         static DevDescription makeDevDescription(Node&);
         void startScan();
         INT findFtdiDevices();
         void printFtdiDevices();
-        int32_t sendData(::std::vector<char>&);
+        INT sendFile(CString&, \
+            ::std::atomic_bool&);
         void stopLogging();
+        void stopSending();
         void abort();
 
         void registerCallBack(::std::function <CallBack> call_back)
         {
             m_callBacks.emplace_back(call_back);
         }
-        const DevDescription& getSelDev() const
+        DevDescription getSelDev() const
         {
             if (m_selDev != m_devDescriptionMap.end())
                 return m_selDev->first;
@@ -99,23 +115,25 @@ namespace FTDI
         {
             return m_devDescriptions;
         }
-    private: /*--- Variables ---*/
-        //miscelaneous
-        CallBacks m_callBacks;
-        ::std::future<void> m_future;
-        ::std::atomic_bool m_stopScan{false};
-        //::std::mutex m_scanMtx;
-        LoggerMap m_loggerMap;
+        bool isSending()
+        {
+            return m_isSending.load();
+        }
 
-        //hardware
+    private: /*--- Variables ---*/
+        CallBacks m_callBacks;
+        ::std::future<void> m_scanFuture;
+        ::std::atomic_bool m_stopScan{ false };
+        ::std::atomic_bool m_stopSend{ false };
+        ::std::atomic_bool m_isSending{ false };
+        LoggerMap m_loggerMap;
         DevNodes m_devNodes;
         DevDescriptionMap::iterator m_selDev;
-
-        //representation at GUI side
         DevDescriptions m_devDescriptions;
         DevDescriptionMap m_devDescriptionMap;
-
-        ::std::mutex m_sendMtx;
+        //::std::mutex m_devMtx;
+        ::std::recursive_mutex m_devMtx;
+        UINT m_sendTaskCounter{ 0 };
     };
 
     class Logger
@@ -130,8 +148,7 @@ namespace FTDI
             NO_FILE_NAME_ERR = -1,
             ALL_GOOD = 0,
             STOPPED = 1,
-            IMMEDIATE_RX_RATE = 2,
-            MEDIUM_RX_RATE = 3,
+            MEDIUM_RX_RATE = 2,
         };
         using CallBack =
             ::std::function<void(const EventCode&, const Data&)>;
@@ -202,9 +219,8 @@ namespace FTDI
         ::std::atomic_bool m_isReading{ false };
         ::std::atomic_bool m_fileOpenedFlag{ false };
         ::std::atomic_bool m_startStopLogging{ false };
-
-
-    };
+        ::std::atomic_bool m_isSelectedDev{ false };
+    }; //end class Logger
 
     class Writer
     {
@@ -243,9 +259,9 @@ namespace FTDI
         {
             m_callBacks.emplace_back(call_back);
         }
-        bool isWriting()
+        bool isSending()
         {
-            return m_startStopFlag.load();
+            return m_isSending.load();
         }
         void setPeriod(CString& period);
         void setPeriod(int32_t period)
@@ -274,9 +290,13 @@ namespace FTDI
         ::std::vector<char> m_fileDataBuf;
         int32_t m_period{ -1 };
 
-        ::std::atomic_bool m_startStopFlag{ false };
+        
         ::std::list< CallBack > m_callBacks;
         ::std::future<void> m_future;
+        ::std::atomic_bool m_sendingOnce{ false };
+        ::std::atomic_bool m_stopSending{ false };
+        ::std::atomic_bool m_isSending{ false };
+
     };
 
 } //end namespace
