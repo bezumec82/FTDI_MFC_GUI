@@ -386,9 +386,9 @@ LONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread)
         time_stat.reportStream(bytesToSend);
         //Deadlock : GUI waits to stop hanler,
         //handler waits to set statistics in GUI
-        if (stop_from_thread.load() == false) //to prevent deadlock
-            notifyAll(EventCode::MEDIUM_TX_RATE,
-                Data{ time_stat.getMedByteRate() });
+        //if (stop_from_thread.load() == false) //to prevent deadlock
+        //    notifyAll(EventCode::MEDIUM_TX_RATE,
+        //        Data{ time_stat.getMedByteRate() });
     } //end while
     //normal exit
 
