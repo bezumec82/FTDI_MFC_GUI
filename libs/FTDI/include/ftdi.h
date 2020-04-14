@@ -32,8 +32,8 @@
 #define SEND_SPEED_BYTES_PER_SEC    10000.0
 #define LOCK_TIMEOUT_MS             50
 
-
 #define DEBUG_MERGE     FALSE
+
 
 namespace FTDI
 {
@@ -41,14 +41,9 @@ namespace FTDI
 
     using Node = FT_DEVICE_LIST_INFO_NODE;
     using DevNodes = ::std::vector<Node>;
-
     using DevDescription = ::std::string;
     using DevDescriptions = ::std::vector < ::std::string >;
 
-    //UseCase :
-    //Call 'findFtdiDevices' to observe all FTDI devices in the system.
-    //Set variable 'm_selDevDescr' to the selected one.
-    //Now it is possible to open selected device and start reading/writing
     class FtdiHandler
     {
     public: /*--- Aliaces ---*/
@@ -73,37 +68,40 @@ namespace FTDI
             void(const EventCode&, const Data&);
         using CallBacks = ::std::list< ::std::function<CallBack> >;
 
-    public: /*--- Constructor ---*/
+    private: /*--- Constructor ---*/
         FtdiHandler()
-            //: m_selDev{ m_devDescriptionMap.end() }
         {
             m_selDev = m_devDescriptionMap.end();
         }
+    public:
+        static FtdiHandler& getInstance()
+        {
+            static FtdiHandler instance;
+            return instance;
+        }
 
     private: /*--- Implementation ----*/
+        //merging device lists
         BOOL mergeDevsList(DevNodes& devs);
-        void notifyAll(const EventCode&, const Data&);
         void startReadDev(Node&);
         void stopReadDev(Node&);
+        void notifyAll(const EventCode&, const Data&);
         void stopScan();
-        INT openFile(CString&, CFile&);
         INT sendData(::std::vector<char>&);
+        LONG getTxQueueSize();
 
     public: /*--- Methods ---*/
         static DevDescription makeDevDescription(Node&);
         void startScan();
         INT findFtdiDevices();
         void printFtdiDevices();
-        INT sendFile(CString&, \
-            ::std::atomic_bool&);
+        LONG sendFile(CFile&, ::std::atomic_bool&);
         void stopLogging();
-        void stopSending();
+        void stopSend();
         void abort();
+        void registerCallBack(::std::function <CallBack>);
 
-        void registerCallBack(::std::function <CallBack> call_back)
-        {
-            m_callBacks.emplace_back(call_back);
-        }
+        /*--- Getters/Setters ---*/
         DevDescription getSelDev() const
         {
             if (m_selDev != m_devDescriptionMap.end())
@@ -123,19 +121,23 @@ namespace FTDI
     private: /*--- Variables ---*/
         CallBacks m_callBacks;
         ::std::future<void> m_scanFuture;
-        ::std::atomic_bool m_stopScan{ false };
-        ::std::atomic_bool m_stopSend{ false };
-        ::std::atomic_bool m_isSending{ false };
         LoggerMap m_loggerMap;
         DevNodes m_devNodes;
         DevDescriptionMap::iterator m_selDev;
         DevDescriptions m_devDescriptions;
         DevDescriptionMap m_devDescriptionMap;
-        //::std::mutex m_devMtx;
-        ::std::recursive_mutex m_devMtx;
+        ::std::mutex m_devMtx;
         UINT m_sendTaskCounter{ 0 };
+
+    private: /*--- Flags ---*/
+        ::std::atomic_bool m_stopScan{ false };
+        ::std::atomic_bool m_stopSend{ false };
+        ::std::atomic_bool m_isSending{ false };
     };
 
+    //This class assigned to the device,
+    //it reads device continiously and starts
+    //writing to file by command
     class Logger
     {
     public: /*--- Aliaces ---*/
@@ -180,7 +182,7 @@ namespace FTDI
         {
             return m_isReading.load();
         }
-        void startLoging()
+        void startLogging()
         {
             m_startStopLogging.store(true);
         }
@@ -235,6 +237,7 @@ namespace FTDI
             NO_PERIOD_ERR = -1,
             ALL_GOOD = 0,
             STOPPED = 1,
+            MEDIUM_TX_RATE = 2,
         };
         using CallBack =
             ::std::function<void(const EventCode&, const Data&)>;
@@ -248,9 +251,11 @@ namespace FTDI
         void notifyAll(const EventCode&, const Data&);
         void sendOnce();
         void doSend();
+        INT openFile(CString&, CFile&);
+        void rewindFile(CFile&);
 
     public: /*--- Methods ---*/
-        int32_t readFile();
+        INT readFile();
         void start();
         void stop();
 
@@ -284,19 +289,16 @@ namespace FTDI
 
     private: /*--- Variables ---*/
         FtdiHandler& m_ftdiHandler_ref;
-
         CString m_fileName;
-        CFile m_sendFile;
         ::std::vector<char> m_fileDataBuf;
         int32_t m_period{ -1 };
-
-        
         ::std::list< CallBack > m_callBacks;
         ::std::future<void> m_future;
-        ::std::atomic_bool m_sendingOnce{ false };
-        ::std::atomic_bool m_stopSending{ false };
-        ::std::atomic_bool m_isSending{ false };
 
+    private: /*--- Flags ---*/
+        ::std::atomic_bool m_sendingOnce{ false };
+        ::std::atomic_bool m_stopSend{ false };
+        ::std::atomic_bool m_isSending{ false };
     };
 
 } //end namespace

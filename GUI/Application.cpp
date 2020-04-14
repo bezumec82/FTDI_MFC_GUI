@@ -12,15 +12,15 @@
 #endif
 
 
-// CMFCApp
+// Application
 
-BEGIN_MESSAGE_MAP(CMFCApp, CWinApp)
+BEGIN_MESSAGE_MAP(Application, CWinApp)
 END_MESSAGE_MAP()
 
 
-// CMFCApp construction
+// Application construction
 
-CMFCApp::CMFCApp()
+Application::Application()
 {
 	// support Restart Manager
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
@@ -30,14 +30,14 @@ CMFCApp::CMFCApp()
 }
 
 
-// The one and only CMFCApp object
+// The one and only Application object
 
-CMFCApp theApp;
+Application theApp;
 
 
-// CMFCApp initialization
+// Application initialization
 
-BOOL CMFCApp::InitInstance()
+BOOL Application::InitInstance()
 {
 	// InitCommonControlsEx() is required on Windows XP if an application
 	// manifest specifies use of ComCtl32.dll version 6 or later to enable
@@ -84,7 +84,7 @@ BOOL CMFCApp::InitInstance()
 	}
 //#endif
 
-	CMFCDlg dlg;
+	Dialog dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)
@@ -118,7 +118,7 @@ BOOL CMFCApp::InitInstance()
 	return FALSE;
 }
 
-int CMFCApp::ExitInstance()
+int Application::ExitInstance()
 {
 	::std::cout << "Closing application" << ::std::endl;
 	//	deallocate console

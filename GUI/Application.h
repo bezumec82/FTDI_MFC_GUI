@@ -15,14 +15,14 @@
 
 
 
-// CMFCApp:
+// Application:
 // See MFCApplication1.cpp for the implementation of this class
 //
 
-class CMFCApp : public CWinApp
+class Application : public CWinApp
 {
 public:
-	CMFCApp();
+	Application();
 
 	// Overrides
 public:
@@ -34,4 +34,4 @@ public:
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CMFCApp theApp;
+extern Application theApp;

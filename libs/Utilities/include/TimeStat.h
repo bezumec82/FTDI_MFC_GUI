@@ -23,36 +23,17 @@ public:
 		m_startTime = { 0 };
 	}
 
-    double touchByteRate(size_t recv_bytes)
+    void reportStream(size_t bytes)
     {
-		m_bytesOveral += recv_bytes;
-
-		if (m_prevTime == 0)
-		{
-			m_prevTime = clock();
-			return 0.0;
-		}
-
-		clock_t curr_time = clock();
-		clock_t time_diff = curr_time - m_prevTime;
-
-		double time_diff_msec = (double(time_diff))
-			/ (double(CLOCKS_PER_SEC));
-
-		m_prevTime = curr_time;
-
-		return(double(recv_bytes) / time_diff_msec);
+		m_bytesOveral += bytes;
     }
 
 	CString getMedByteRate()
 	{
 		clock_t curr_time = clock();
 		clock_t time_diff = curr_time - m_startTime;
-
 		double time_diff_msec = (double(time_diff))
 			/ (double(CLOCKS_PER_SEC));
-
-
 		return ::std::to_wstring(\
 			(double(m_bytesOveral) / time_diff_msec) ).c_str();
 	}

@@ -6,18 +6,20 @@
 #endif
 
 
-CMFCDlg::CMFCDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent)
+Dialog::Dialog(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_MFCSIMPLE_DIALOG, pParent),
+	m_ftdiHandler_ref {FTDI::FtdiHandler::getInstance()}
 {
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		m_oneLine_uptr_arr[idx] = ::std::make_unique< OneLine >(m_ftdiHandler);
-		m_stateHolder.registerWriter(idx, m_oneLine_uptr_arr[idx]->view());
+		m_oneLine_arr[idx] = \
+			::std::make_unique< OneLine >(m_ftdiHandler_ref);
+		m_stateHolder.registerWriter(idx, m_oneLine_arr[idx]->view());
 	}
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
-BOOL CMFCDlg::OnInitDialog()
+BOOL Dialog::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -30,14 +32,14 @@ BOOL CMFCDlg::OnInitDialog()
 	/////////////////////
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		( * m_oneLine_uptr_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
-		( * m_oneLine_uptr_arr[idx] ).m_eBoxSendPeriod.SetWindowTextW(L"0");
+		( * m_oneLine_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
+		( * m_oneLine_arr[idx] ).m_eBoxSendPeriod.SetWindowTextW(L"0");
 	}
 	//autoscan
 	m_stateHolder.restoreState();
-	m_ftdiHandler.registerCallBack(::std::bind(&CMFCDlg::ftdiCallBack, this,
+	m_ftdiHandler_ref.registerCallBack(::std::bind(&Dialog::ftdiCallBack, this,
 		::std::placeholders::_1, ::std::placeholders::_2));
-	m_ftdiHandler.startScan();
+	m_ftdiHandler_ref.startScan();
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -45,7 +47,7 @@ BOOL CMFCDlg::OnInitDialog()
 //  to draw the icon.  For MFC applications using the document/view model,
 //  this is automatically done for you by the framework.
 
-void CMFCDlg::OnPaint()
+void Dialog::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -67,21 +69,21 @@ void CMFCDlg::OnPaint()
 	}
 }
 
-void CMFCDlg::OnClose()
+void Dialog::OnClose()
 {
 	::std::cout << "Stop all activity" << ::std::endl;
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
-		(*m_oneLine_uptr_arr[idx]).stop();
+		(*m_oneLine_arr[idx]).stop();
 	}
-	m_ftdiHandler.abort();
+	m_ftdiHandler_ref.abort();
 	::std::this_thread::sleep_for(::std::chrono::milliseconds(300));
 	CDialogEx::OnClose();
 }
 
 // The system calls this function to obtain the cursor to display while the user drags
 //  the minimized window.
-HCURSOR CMFCDlg::OnQueryDragIcon()
+HCURSOR Dialog::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }

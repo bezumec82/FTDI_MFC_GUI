@@ -6,35 +6,48 @@ using namespace FTDI;
 void Writer::notifyAll(const EventCode& event,
 	const Data& data)
 {
+
 	for (const auto& func : m_callBacks)
 		func(event, data);
+
 }
 
-int32_t Writer::readFile()
+INT Writer::openFile(CString& file_name, CFile& file)
 {
 	CFileException ex;
-	if (m_fileName.IsEmpty())
+	if (file_name.IsEmpty())
 	{
-		::std::cerr << "File to write is not set" << ::std::endl;
+		::std::cerr << "File to send is not set" << ::std::endl;
 		return -1;
 	}
-	if (!m_sendFile.Open(m_fileName,
-		CFile::modeRead | CFile::typeBinary | CFile::shareDenyWrite, &ex))
+	if (!file.Open(file_name,
+		CFile::modeRead
+		| CFile::shareDenyNone, &ex))
 	{
-		::std::cout << "Can't open file "
-			<< utf16ToUtf8(m_fileName.GetString()) << ::std::endl;
+		TCHAR szCause[255] = { 0 };
+		ex.GetErrorMessage(szCause, sizeof(szCause) / 2 - 1);
+		::std::wcout << "Can't open file "
+			<< file.GetFilePath().GetString() << '\n'
+			<< "Error : " << szCause << ::std::endl;
+		return -1;
+	}
+	::std::wcout << "File " << file.GetFilePath().GetString()
+		<< " was opened" << ::std::endl;
+	return 0;
+}
 
-		return -1;
-	}
+INT Writer::readFile()
+{
+	CFile file;
+	if (openFile(m_fileName, file) != 0) { return -1; }
 	m_fileDataBuf.clear();
-	m_fileDataBuf.resize(UINT(m_sendFile.GetLength()));
-	UINT bytesRead = m_sendFile.Read(\
-		m_fileDataBuf.data(), UINT(m_sendFile.GetLength()));
-	m_sendFile.Close();
+	m_fileDataBuf.resize(UINT(file.GetLength()));
+	UINT bytesRead = file.Read(\
+		m_fileDataBuf.data(), UINT(file.GetLength()));
 	if (bytesRead > 0)
 	{
 		::std::wcout << "Data from file '"
-			<< m_sendFile.GetFilePath().GetString()
+			<< file.GetFilePath().GetString()
 			<< "' is stored." << ::std::endl;
 		return 0;
 	}
@@ -62,7 +75,7 @@ void Writer::setPeriod(CString& period)
 
 void Writer::stop()
 {
-	m_stopSending.store(true);
+	m_stopSend.store(true);
 	while (isSending());
 }
 
@@ -73,28 +86,46 @@ void Writer::sendOnce()
 	return;
 }
 
+void Writer::rewindFile(CFile& file)
+{
+	file.Seek(0, CFile::begin);
+}
+
+
 void Writer::doSend()
 {
 	auto work = [&]() mutable {
-		::std::cout << "Start sending data to the device "
-			<< m_ftdiHandler_ref.getSelDev() << ::std::endl;
+		CFile file;
+		TimeStat time_stat;
+		::std::cout << "Start sending data thread. "
+			<< "Device " << m_ftdiHandler_ref.getSelDev() << ::std::endl;
+		if (openFile(m_fileName, file) != 0) { goto fileOpenError; }
 		m_isSending.store(true);
-		while (m_stopSending.load() == false)
+		time_stat.start();
+		while (m_stopSend.load() == false)
 		{
-			if (m_ftdiHandler_ref.sendFile(\
-				m_fileName, m_stopSending) != 0) { break; }
+			rewindFile(file);
+			LONG sentBytes = m_ftdiHandler_ref.sendFile(\
+				file, m_stopSend);
+			if (sentBytes < 0) { break; }
 			::std::this_thread::sleep_for(::std::chrono::milliseconds(m_period));
 			if (m_sendingOnce.load())
 			{
 				m_sendingOnce.store(false);
 				break;
 			}
+			time_stat.reportStream(sentBytes);
+			notifyAll(EventCode::MEDIUM_TX_RATE,
+				Data{ time_stat.getMedByteRate() });
 		}//end while - future destructor here
 		m_isSending.store(false);
+	fileOpenError:
 		notifyAll(EventCode::STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
 		MessageBeep(MB_ABORTRETRYIGNORE);
+		//CFile closed here
 	};
+
 	m_future = ::std::async(std::launch::async, work);
 }
 
@@ -107,7 +138,7 @@ void Writer::start()
 		notifyAll(EventCode::NO_PERIOD_ERR, Data{});
 		return;
 	}
-	m_stopSending.store(false);
+	m_stopSend.store(false);
 	if (m_period == 0) { sendOnce(); }
 	doSend();
 }

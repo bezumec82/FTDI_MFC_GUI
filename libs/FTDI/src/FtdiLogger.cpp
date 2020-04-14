@@ -173,7 +173,7 @@ INT Logger::doReading()
 			if (recvData(buffer) != 0) { break; }
 			if (buffer.empty()) continue;
 			doLogging(buffer);
-			time_stat.touchByteRate(buffer.size());
+			time_stat.reportStream(buffer.size());
 			if (m_isSelectedDev.load())
 			{
 				notifyAll(EventCode::MEDIUM_RX_RATE,
@@ -212,7 +212,8 @@ INT Logger::doReading()
 
 failure:
 	closeDevice();
-	m_saveFile.Close();
+	if (m_fileOpenedFlag.load())
+		m_saveFile.Close();
 	notifyAll(EventCode::STOPPED, Data{});
 	return -1;
 }
@@ -230,7 +231,6 @@ INT Logger::startReading()
 
 void Logger::stop()
 {
-
 	m_startStopReading.store(false);
 	m_startStopLogging.store(false);
 	notifyAll(EventCode::STOPPED, Data{});
