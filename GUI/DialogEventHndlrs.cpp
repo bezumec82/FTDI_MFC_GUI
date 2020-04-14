@@ -89,7 +89,8 @@ void Dialog::startStopDispatch(UINT nID)
 		&&(nID <= IDC_CHBOX_START_STOP_20))
 	{
 		uint8_t idx = nID - IDC_CHBOX_START_STOP_1;
-		::std::cout << "Start/stop" << (idx + 1) << " is pressed" << ::std::endl;
+		::std::cout << "Start/stop" << (idx + 1)
+			<< " is pressed" << ::std::endl;
 		( * m_oneLine_arr[idx]).startStopHndlr();
 	}
 	else
