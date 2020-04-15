@@ -6,8 +6,6 @@
 #include <future>
 #include <string>
 
-//#include "Utilities.h"
-
 #include "ftdi.h"
 
 class OneLine
@@ -50,8 +48,21 @@ public:
 		m_ftdiWriter{ ftdiHandler },
 		m_view(*this)
 	{
-		m_ftdiWriter.registerCallBack(::std::bind(&OneLine::writerCallBack, this,
+#if(1)
+		m_ftdiWriter.registerCallBack(::std::bind(\
+			&OneLine::writerCallBack, this,
 			::std::placeholders::_1, ::std::placeholders::_2));
+#else
+		//register event receiver from FTDI
+		m_ftdiHandler_ref.registerCallBack(::std::bind(\
+			&::FTDI::EventBuffer::receiveEvent, &m_eventBuffer,
+			::std::placeholders::_1, ::std::placeholders::_2));
+		//register local event handler
+		m_eventBuffer.registerCallBack(::std::bind(\
+			&OneLine::writerCallBack, this,
+			::std::placeholders::_1, ::std::placeholders::_2));
+#endif
+
 	}
 
 public: /*--- Getters/Setters ---*/
@@ -65,8 +76,7 @@ private: /*--- Implementation ---*/
 	void writePeriod(const CString&);
 
 	int32_t openFile(CString);
-	void writerCallBack(const ::FTDI::Writer::EventCode& errCode,
-		const ::FTDI::Writer::Data& data);
+	::FTDI::CallBack writerCallBack;
 
 public: /*--- Event handlers ---*/
 
@@ -83,6 +93,7 @@ private: /*--- Logic variables ---*/
 	::FTDI::FtdiHandler& m_ftdiHandler_ref;
 	::FTDI::Writer m_ftdiWriter;
 	View m_view;
+	::FTDI::EventBuffer m_eventBuffer;
 
 public: /*--- GUI variables --- */
 	CEdit m_eBoxOpenedFPth;

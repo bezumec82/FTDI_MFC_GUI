@@ -40,6 +40,7 @@ void Dialog::DoDataExchange(CDataExchange* pDX)
 	}
 	DDX_Control(pDX, IDC_EBOX_MED_RX_RATE, m_eBoxMedRXrate);
 	DDX_Control(pDX, IDC_EBOX_MED_TX_RATE, m_eBoxMedTXrate);
+	DDX_Control(pDX, IDC_EBOX_IMM_TX_RATE, m_eBoxImmTXrate);
 }
 
 void Dialog::OnBnClickedStop()
@@ -99,12 +100,12 @@ void Dialog::startStopDispatch(UINT nID)
 	}
 }
 
-void Dialog::ftdiCallBack(const ::FTDI::FtdiHandler::EventCode& event,
-	const ::FTDI::FtdiHandler::Data& data)
+void Dialog::ftdiCallBack(const ::FTDI::EventCode& event,
+	const ::FTDI::Data& data)
 {
 	switch (event)
 	{
-		case ::FTDI::FtdiHandler::EventCode::SCAN_DATA:
+		case ::FTDI::EventCode::DEV_LIST:
 		{
 			//re-fill combo box
 			m_cBoxDevices.ResetContent();
@@ -115,7 +116,7 @@ void Dialog::ftdiCallBack(const ::FTDI::FtdiHandler::EventCode& event,
 			}
 			break;
 		}
-		case ::FTDI::FtdiHandler::EventCode::NEW_DEV_SELECTED:
+		case ::FTDI::EventCode::NEW_DEV_SELECTED:
 		{
 			for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 			{
@@ -123,10 +124,21 @@ void Dialog::ftdiCallBack(const ::FTDI::FtdiHandler::EventCode& event,
 			}
 			break;
 		}
-		case ::FTDI::FtdiHandler::EventCode::MEDIUM_TX_RATE:
+		case ::FTDI::EventCode::MEDIUM_TX_RATE:
 		{
 			m_eBoxMedTXrate.SetWindowTextW(::std::get<1>(data));
 			break;
 		}
+		case ::FTDI::EventCode::IMMEDIATE_TX_RATE:
+		{
+			m_eBoxImmTXrate.SetWindowTextW(::std::get<1>(data));
+			break;
+		}
+		case ::FTDI::EventCode::MEDIUM_RX_RATE:
+		{
+			m_eBoxMedRXrate.SetWindowTextW(::std::get<1>(data));
+			break;
+		}
+
 	}
 }

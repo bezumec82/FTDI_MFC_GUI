@@ -1,7 +1,11 @@
-//#include "pch.h"
 #include "ftdi.h"
 
 using namespace FTDI;
+
+void Writer::registerCallBack(::std::function<CallBack> call_back)
+{
+	m_callBacks.emplace_back(call_back);
+}
 
 void Writer::notifyAll(const EventCode& event,
 	const Data& data)
@@ -99,7 +103,10 @@ void Writer::doSend()
 		TimeStat time_stat;
 		::std::cout << "Start sending data thread. "
 			<< "Device " << m_ftdiHandler_ref.getSelDev() << ::std::endl;
-		if (openFile(m_fileName, file) != 0) { goto fileOpenError; }
+		if (openFile(m_fileName, file) != 0) {
+			this->notifyAll(EventCode::WRITE_FOPEN_ERR, Data{});
+			goto fileOpenError;
+		}
 		m_isSending.store(true);
 		time_stat.start();
 		while (m_stopSend.load() == false)
@@ -115,12 +122,12 @@ void Writer::doSend()
 				break;
 			}
 			time_stat.reportStream(sentBytes);
-			notifyAll(EventCode::MEDIUM_TX_RATE,
+			m_ftdiHandler_ref.notifyAll(EventCode::MEDIUM_TX_RATE,
 				Data{ time_stat.getMedByteRate() });
 		}//end while - future destructor here
 		m_isSending.store(false);
 	fileOpenError:
-		notifyAll(EventCode::STOPPED, Data{});
+		notifyAll(EventCode::WRITE_STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
 		MessageBeep(MB_ABORTRETRYIGNORE);
 		//CFile closed here

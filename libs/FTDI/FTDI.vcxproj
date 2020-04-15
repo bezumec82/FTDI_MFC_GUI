@@ -202,6 +202,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\EventBuffer.cpp" />
     <ClCompile Include="src\FtdiHandler.cpp" />
     <ClCompile Include="src\FtdiLogger.cpp" />
     <ClCompile Include="src\FtdiWriter.cpp" />

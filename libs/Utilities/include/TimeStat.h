@@ -34,11 +34,19 @@ public:
 		clock_t time_diff = curr_time - m_startTime;
 		double time_diff_msec = (double(time_diff))
 			/ (double(CLOCKS_PER_SEC));
-		return ::std::to_wstring(\
-			(double(m_bytesOveral) / time_diff_msec) ).c_str();
+		if (time_diff_msec > TIME_THREASHOLD)
+		{
+			return{ ::std::to_wstring(\
+				(double(m_bytesOveral) / time_diff_msec)).c_str() };
+		}
+		else
+		{
+			return { L"infinite" };
+		}
 	}
 
 private:
+	double TIME_THREASHOLD = 0.001;
 	clock_t m_startTime{ 0 };
 	clock_t m_prevTime{ 0 };
 	uint64_t m_bytesOveral{ 0 };

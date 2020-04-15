@@ -68,6 +68,8 @@
 #define IDC_EBOX_PERIOD_20              4020
 #define IDC_EBOX_MED_RX_RATE            4021
 #define IDC_EBOX_MED_TX_RATE            4022
+#define IDC_EBOX_MED_TX_RATE2           4023
+#define IDC_EBOX_IMM_TX_RATE            4023
 #define IDC_CHBOX_START_STOP_1          5001
 #define IDC_CHBOX_START_STOP_2          5002
 #define IDC_CHBOX_START_STOP_3          5003

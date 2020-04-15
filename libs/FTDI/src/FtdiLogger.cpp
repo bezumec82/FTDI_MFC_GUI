@@ -3,19 +3,12 @@
 
 using namespace FTDI;
 
-void Logger::notifyAll(const EventCode& event,
-	const Data& data)
-{
-	for (const auto& func : m_callBacks)
-		func(event, data);
-}
-
-int32_t Logger::openFile()
+INT Logger::openFile()
 {
     if (m_fileName.IsEmpty())
     {
         ::std::cerr << "File to save is not set" << ::std::endl;
-		notifyAll(EventCode::NO_FILE_NAME_ERR, Data{} );
+		m_ftdiHandler_ref.notifyAll(EventCode::WRITE_NO_FNAME_ERR, Data{} );
         return -1;
     }
     CFileException ex;
@@ -30,7 +23,7 @@ int32_t Logger::openFile()
 		::std::wcout << "Can't create/open file "
 			<< m_saveFile.GetFilePath().GetString() << '\n'
 			<< "Error : " << szCause << ::std::endl;
-        notifyAll(EventCode::FOPEN_ERR, Data{} );
+		m_ftdiHandler_ref.notifyAll(EventCode::READ_FOPEN_ERR, Data{} );
         return -1;
     }
     ::std::wcout << "File " << m_saveFile.GetFilePath().GetString()
@@ -41,7 +34,7 @@ int32_t Logger::openFile()
     return 0;
 }
 
-int32_t Logger::openDevice()
+INT Logger::openDevice()
 {
 	FT_STATUS ftdi_stat = FT_OpenEx(
 		m_node_ref.SerialNumber,
@@ -82,7 +75,7 @@ void Logger::closeDevice()
 	}
 }
 
-int32_t Logger::clearRxBuf()
+INT Logger::clearRxBuf()
 {
 	FT_STATUS ftdi_stat = FT_Purge(m_node_ref.ftHandle, FT_PURGE_RX);
 	if (ftdi_stat != FT_OK)
@@ -94,7 +87,7 @@ int32_t Logger::clearRxBuf()
 	return 0;
 }
 
-int32_t Logger::recvData(::std::vector<char>& buffer)
+LONG Logger::recvData(::std::vector<char>& buffer)
 {
 	DWORD EventDWord{ 0 };
 	DWORD TxBytes{ 0 }; DWORD RxBytes{ 0 };
@@ -119,7 +112,7 @@ int32_t Logger::recvData(::std::vector<char>& buffer)
 
 	buffer.resize(RxBytes);
 	ftdi_stat = FT_Read(m_node_ref.ftHandle, \
-		buffer.data(), buffer.size(), &BytesReceived);
+		buffer.data(), DWORD(buffer.size()), &BytesReceived);
 	if (ftdi_stat != FT_OK)
 	{
 		::std::cerr << "Can't read data from the device "
@@ -134,7 +127,7 @@ int32_t Logger::recvData(::std::vector<char>& buffer)
 			<< " is received" << ::std::endl;
 		return -1;
 	}
-	return 0;
+	return BytesReceived;
 }
 
 void Logger::doLogging(::std::vector<char>& buffer)
@@ -170,13 +163,13 @@ INT Logger::doReading()
 			::std::this_thread::sleep_for(\
 				::std::chrono::milliseconds(SAVE_PERIOD_MS));
 			::std::vector<char> buffer;
-			if (recvData(buffer) != 0) { break; }
+			if (recvData(buffer) < 0) { break; }
 			if (buffer.empty()) continue;
 			doLogging(buffer);
 			time_stat.reportStream(buffer.size());
-			if (m_isSelectedDev.load())
+			if (m_isSelDev.load())
 			{
-				notifyAll(EventCode::MEDIUM_RX_RATE,
+				m_ftdiHandler_ref.notifyAll(EventCode::MEDIUM_RX_RATE,
 					Data{ time_stat.getMedByteRate() });
 			}
 		}
@@ -187,7 +180,7 @@ INT Logger::doReading()
 			m_saveFile.Flush();
 			m_saveFile.Close();
 		}
-		notifyAll(EventCode::STOPPED, Data{});
+		m_ftdiHandler_ref.notifyAll(EventCode::READ_STOPPED, Data{});
 		::std::cout << "Data saving is stopped" << ::std::endl;
 		m_isReading.store(false);
 	};
@@ -214,7 +207,7 @@ failure:
 	closeDevice();
 	if (m_fileOpenedFlag.load())
 		m_saveFile.Close();
-	notifyAll(EventCode::STOPPED, Data{});
+	m_ftdiHandler_ref.notifyAll(EventCode::READ_STOPPED, Data{});
 	return -1;
 }
 
@@ -233,6 +226,6 @@ void Logger::stop()
 {
 	m_startStopReading.store(false);
 	m_startStopLogging.store(false);
-	notifyAll(EventCode::STOPPED, Data{});
+	m_ftdiHandler_ref.notifyAll(EventCode::READ_STOPPED, Data{});
 	while (isReading()); //wait for stop
 }

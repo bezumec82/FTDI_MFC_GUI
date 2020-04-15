@@ -44,7 +44,7 @@ public: /*--- Methods ---*/
 private: /*--- Implementation ---*/
     ::std::wstring writerKey(UINT);
     int32_t openFile(CString);
-    int32_t readFile();
+    INT readFile();
 
 private: /*--- Variables ---*/
     ::std::unordered_map< UINT, ::OneLine::View& > m_viewMap;

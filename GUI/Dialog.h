@@ -48,7 +48,7 @@ protected: /*--- Implementation ---*/
 	DECLARE_MESSAGE_MAP()
 
 public: /*--- Event handlers ---*/
-	::FTDI::FtdiHandler::CallBack ftdiCallBack;
+	::FTDI::CallBack ftdiCallBack;
 
 	//afx_msg void OnBnClickedScan();
 	afx_msg void OnBnClickedStop();
@@ -71,7 +71,9 @@ private: /*--- Utility variables ---*/
 private: /*--- Statistics ---*/
 	CEdit m_eBoxMedRXrate;
 	CEdit m_eBoxMedTXrate;
+	CEdit m_eBoxImmTXrate;
 
 private: /*--- Misc ---*/
 	StateHolder m_stateHolder;
+	::FTDI::EventBuffer m_eventBuffer;
 };

@@ -18,6 +18,7 @@
 #include <variant>
 #include <algorithm>
 #include <tuple>
+#include <queue>
 
 #include <windows.h>
 #include <ftd2xx.h>
@@ -37,36 +38,79 @@
 
 namespace FTDI
 {
+    /*--- Forward declarations ---*/
     class Logger;
+    class Writer;
 
+    /*--- Aliaces ---*/
     using Node = FT_DEVICE_LIST_INFO_NODE;
     using DevNodes = ::std::vector<Node>;
     using DevDescription = ::std::string;
     using DevDescriptions = ::std::vector < ::std::string >;
 
+    /*--- Event system ---*/
+    enum class EventCode : int8_t
+    {
+        ALL_GOOD            = 0,
+        /*--- Writers' codes ---*/
+        NO_PERIOD_ERR       = -10,
+        WRITE_FOPEN_ERR     = -11,
+        WRITE_STOPPED       = 10,
+        MEDIUM_TX_RATE      = 11,
+        /*--- Loggers' codes */
+        WRITE_NO_FNAME_ERR  = -20,
+        READ_FOPEN_ERR      = -21,
+        MEDIUM_RX_RATE      = 20,
+        READ_STOPPED        = 21,
+        IMMEDIATE_RX_RATE   = 22,
+
+        /*--- Handler codes ---*/
+        DEV_LIST            = 1, //changed list of devices after successful merge
+        NEW_DEV_SELECTED    = 2,
+        IMMEDIATE_TX_RATE   = 5,
+    };
+
+    using Data = ::std::variant<
+        DevDescriptions, /* to CBox */
+        CString
+    >;
+
+    using CallBack =
+        void(const EventCode&, const Data&);
+    using CallBacks = ::std::list< ::std::function<CallBack> >;
+
+
+    class EventBuffer
+    {
+    public: /*--- Aliases ---*/
+        using Event = ::std::pair<EventCode, Data>;
+        using Events = ::std::queue<Event>;
+    public:
+        EventBuffer();
+        ~EventBuffer();
+        void registerCallBack(::std::function <CallBack>);
+        CallBack receiveEvent;
+
+
+    private:
+        UINT BUFFER_DELAY_MS = 10;
+        Events m_events;
+        ::std::future<void> m_future;
+        CallBacks m_callBacks;
+        ::std::mutex m_callBacksLock;
+        ::std::mutex m_eventsLock;
+        ::std::atomic_bool m_stop{ false };
+    };
+
+
     class FtdiHandler
     {
+        friend class Writer;
+        friend class Logger;
     public: /*--- Aliaces ---*/
-        using Data = ::std::variant<
-            DevDescriptions, /* to CBox */
-            CString /* TX rate */
-        >;
         using DevDescriptionMap = ::std::unordered_map< DevDescription, Node >;
         using LoggerMap = ::std::unordered_map< DevDescription, Logger >;
-        using AsyncResult = ::std::future<void>;
         using Buffer = ::std::vector<char>;
-
-    public: /*--- Enumerators ---*/
-        enum class EventCode : int8_t
-        {
-            ALL_GOOD = 0,
-            SCAN_DATA = 1,
-            NEW_DEV_SELECTED = 2,
-            MEDIUM_TX_RATE = 3,
-        };
-        using CallBack =
-            void(const EventCode&, const Data&);
-        using CallBacks = ::std::list< ::std::function<CallBack> >;
 
     private: /*--- Constructor ---*/
         FtdiHandler()
@@ -95,7 +139,7 @@ namespace FTDI
         void startScan();
         INT findFtdiDevices();
         void printFtdiDevices();
-        LONG sendFile(CFile&, ::std::atomic_bool&);
+        LONGLONG sendFile(CFile&, ::std::atomic_bool&);
         void stopLogging();
         void stopSend();
         void abort();
@@ -121,13 +165,11 @@ namespace FTDI
     private: /*--- Variables ---*/
         CallBacks m_callBacks;
         ::std::future<void> m_scanFuture;
-        LoggerMap m_loggerMap;
-        DevNodes m_devNodes;
-        DevDescriptionMap::iterator m_selDev;
         DevDescriptions m_devDescriptions;
         DevDescriptionMap m_devDescriptionMap;
+        DevDescriptionMap::iterator m_selDev;
+        LoggerMap m_loggerMap;
         ::std::mutex m_devMtx;
-        UINT m_sendTaskCounter{ 0 };
 
     private: /*--- Flags ---*/
         ::std::atomic_bool m_stopScan{ false };
@@ -135,31 +177,21 @@ namespace FTDI
         ::std::atomic_bool m_isSending{ false };
     };
 
+    /*--------------*/
+    /*--- Logger ---*/
+    /*--------------*/
     //This class assigned to the device,
     //it reads device continiously and starts
     //writing to file by command
     class Logger
     {
-    public: /*--- Aliaces ---*/
-        using Data = ::std::variant<CString>;
-
-    public: /*--- Enumerators ---*/
-        enum class EventCode : int8_t
-        {
-            FOPEN_ERR = -2,
-            NO_FILE_NAME_ERR = -1,
-            ALL_GOOD = 0,
-            STOPPED = 1,
-            MEDIUM_RX_RATE = 2,
-        };
-        using CallBack =
-            ::std::function<void(const EventCode&, const Data&)>;
-
     public: /*--- Constructors ---*/
-        Logger(Node& node) :
-            m_node_ref{node}
+        Logger(Node& node, //node to work on
+            FtdiHandler& parent) :
+            m_node_ref{ node },
+            m_ftdiHandler_ref{ parent }
         {
-            m_devDescription = FtdiHandler::makeDevDescription(node);
+            m_devDescription = FtdiHandler::makeDevDescription(m_node_ref);
         }
         ~Logger()
         {
@@ -167,12 +199,11 @@ namespace FTDI
         }
 
     private:/*--- Implementation ---*/
-        int32_t openFile();
-        int32_t openDevice();
+        INT openFile();
+        INT openDevice();
         void closeDevice();
-        int32_t clearRxBuf();
-        int32_t recvData(::std::vector<char>&);
-        void notifyAll(const EventCode& , const Data&);
+        INT clearRxBuf();
+        LONG recvData(::std::vector<char>&);
         INT doReading();
         void doLogging(::std::vector<char>&);
 
@@ -193,27 +224,30 @@ namespace FTDI
         void stop();
 
     public: /*--- Getters/Setters ---*/
-        void registerCallBack(CallBack call_back)
-        {
-            m_callBacks.emplace_back( call_back );
-        }
         void setFileName(CString fileName)
         {
             m_fileName = fileName;
-            //m_fileName.Replace(L' ', L'_');
             m_fileName.Replace(L':', L'_');
         }
         const CString& getFileName()
         {
             return m_fileName;
         }
+        void setAsSelDev()
+        {
+            m_isSelDev.store(true);
+        }
+        void setAsUnSelDev()
+        {
+            m_isSelDev.store(false);
+        }
 
     private: /*--- Variables ---*/
         Node& m_node_ref;
+        FtdiHandler& m_ftdiHandler_ref;
         DevDescription m_devDescription;
         CString m_fileName;
         CFile m_saveFile;
-        ::std::list< CallBack > m_callBacks;
         ::std::future<void> m_future;
 
     private: /*--- Flags ---*/
@@ -221,49 +255,35 @@ namespace FTDI
         ::std::atomic_bool m_isReading{ false };
         ::std::atomic_bool m_fileOpenedFlag{ false };
         ::std::atomic_bool m_startStopLogging{ false };
-        ::std::atomic_bool m_isSelectedDev{ false };
+        ::std::atomic_bool m_isSelDev{ false };
     }; //end class Logger
 
+    /*--------------*/
+    /*--- Writer ---*/
+    /*--------------*/
     class Writer
     {
-    public: /*--- Aliaces ---*/
-        using Data = ::std::variant<CString>;
-
-    public: /*--- Enumerators ---*/
-        enum class EventCode : int8_t
-        {
-            FTDI_OPEN_ERR = -3,
-            NO_DATA_ERR = -2,
-            NO_PERIOD_ERR = -1,
-            ALL_GOOD = 0,
-            STOPPED = 1,
-            MEDIUM_TX_RATE = 2,
-        };
-        using CallBack =
-            ::std::function<void(const EventCode&, const Data&)>;
-
     public: /*--- Constructor ---*/
         Writer(FtdiHandler& ftdi_handler)
             : m_ftdiHandler_ref{ ftdi_handler }
-        {}
+        {
+        }
 
     private: /*--- Implementation ---*/
-        void notifyAll(const EventCode&, const Data&);
         void sendOnce();
         void doSend();
         INT openFile(CString&, CFile&);
         void rewindFile(CFile&);
+        void notifyAll(const EventCode& event,
+            const Data& data);
 
     public: /*--- Methods ---*/
         INT readFile();
         void start();
         void stop();
+        void registerCallBack(::std::function<CallBack>);
 
     public: /*--- Getters/Setters ---*/
-        void registerCallBack(CallBack call_back)
-        {
-            m_callBacks.emplace_back(call_back);
-        }
         bool isSending()
         {
             return m_isSending.load();
@@ -289,11 +309,15 @@ namespace FTDI
 
     private: /*--- Variables ---*/
         FtdiHandler& m_ftdiHandler_ref;
-        CString m_fileName;
-        ::std::vector<char> m_fileDataBuf;
         int32_t m_period{ -1 };
-        ::std::list< CallBack > m_callBacks;
         ::std::future<void> m_future;
+        CallBacks m_callBacks;
+
+    private: /*--- Variables ---*/
+        //read file once in buffer and send constantly
+        //currently unused
+        ::std::vector<char> m_fileDataBuf;
+        CString m_fileName;
 
     private: /*--- Flags ---*/
         ::std::atomic_bool m_sendingOnce{ false };

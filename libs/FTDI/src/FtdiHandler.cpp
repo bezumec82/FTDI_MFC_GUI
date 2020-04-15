@@ -48,7 +48,7 @@ void FtdiHandler::startReadDev(Node& node)
     m_loggerMap.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(dev_description),
-        std::forward_as_tuple(node));
+        std::forward_as_tuple( node, *this ));
     try
     {
         auto& logger = m_loggerMap.at(dev_description);
@@ -60,7 +60,7 @@ void FtdiHandler::startReadDev(Node& node)
             m_loggerMap.erase(dev_description);
         }
     }
-    catch (const ::std::out_of_range& oor)
+    catch (const ::std::out_of_range& )
     {
         ::std::cerr << "Error creating logger map entry for the device : "
             << dev_description << ::std::endl;
@@ -79,7 +79,7 @@ void FtdiHandler::stopReadDev(Node& node)
             ::std::cerr << "More than one element was erased" << ::std::endl;
         }
     }
-    catch (::std::out_of_range& oor)
+    catch (::std::out_of_range& )
     {
         ::std::cout << "No device named : " << dev_description << ::std::endl;
     }
@@ -90,6 +90,7 @@ void FtdiHandler::stopLogging()
 {
     for (auto& pair : m_loggerMap)
     {
+        pair.second.setAsUnSelDev();
         pair.second.stopLogging();
     }
 }
@@ -144,7 +145,7 @@ INT FtdiHandler::findFtdiDevices()
     if (mergeDevsList(nodes_tmp) == true)
     {
         //Indirect access to the resources of other objects
-        notifyAll(EventCode::SCAN_DATA, m_devDescriptions);
+        notifyAll(EventCode::DEV_LIST, m_devDescriptions);
     }
 
     return 0;
@@ -265,8 +266,9 @@ void FtdiHandler::setSelDev(::std::string dev_description)
         auto& logger = m_loggerMap.at(dev_description);
         //start write file as device selected
         logger.startLogging();
+        logger.setAsSelDev();
     }
-    catch (::std::out_of_range& oor)
+    catch (::std::out_of_range& )
     {
         ::std::cout << "No device named : "
             << dev_description << ::std::endl;
@@ -317,12 +319,11 @@ void FtdiHandler::stopSend()
     m_stopSend.store(true);
 }
 
-LONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread)
+LONGLONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread)
 {
     LONG txQueueSize{ 0 };
-
     ULONGLONG file_size{ 0 };
-    ULONGLONG sentBytes{ 0 };
+    LONGLONG sentBytes{ 0 };
     Buffer buffer;
     FT_STATUS ftdi_stat = FT_OTHER_ERROR;
     UINT bytesRead{ 0 };
@@ -386,14 +387,13 @@ LONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread)
         time_stat.reportStream(bytesToSend);
         //Deadlock : GUI waits to stop hanler,
         //handler waits to set statistics in GUI
-        //if (stop_from_thread.load() == false) //to prevent deadlock
-        //    notifyAll(EventCode::MEDIUM_TX_RATE,
-        //        Data{ time_stat.getMedByteRate() });
+        notifyAll(EventCode::IMMEDIATE_TX_RATE,
+            Data{ time_stat.getMedByteRate() });
     } //end while
     //normal exit
 
     m_isSending.store(false);
-    return INT(sentBytes); //truncated
+    return sentBytes;
 
 failure:
     m_isSending.store(false);
@@ -428,7 +428,7 @@ LONG FtdiHandler::getTxQueueSize()
             << "Error : " << ftdi_stat << ::std::endl;
         return -1;
     }
-    return LONG(txQueueSize);
+    return txQueueSize;
 }
 
 

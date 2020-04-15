@@ -36,8 +36,20 @@ BOOL Dialog::OnInitDialog()
 	}
 	//autoscan
 	m_stateHolder.restoreState();
-	m_ftdiHandler_ref.registerCallBack(::std::bind(&Dialog::ftdiCallBack, this,
+#if(0)
+	m_ftdiHandler_ref.registerCallBack(::std::bind(\
+		&Dialog::ftdiCallBack, this,
 		::std::placeholders::_1, ::std::placeholders::_2));
+#else
+	//register event receiver from FTDI
+	m_ftdiHandler_ref.registerCallBack(::std::bind(\
+		&::FTDI::EventBuffer::receiveEvent, &m_eventBuffer,
+		::std::placeholders::_1, ::std::placeholders::_2));
+	//register local event handler
+	m_eventBuffer.registerCallBack(::std::bind(\
+		&Dialog::ftdiCallBack, this,
+		::std::placeholders::_1, ::std::placeholders::_2));
+#endif
 	m_ftdiHandler_ref.startScan();
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }

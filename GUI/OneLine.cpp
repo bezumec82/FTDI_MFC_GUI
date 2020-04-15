@@ -18,27 +18,14 @@ void OneLine::writePeriod(const CString& period)
 	m_eBoxSendPeriod.SetWindowTextW(period);
 }
 
-void OneLine::writerCallBack(const ::FTDI::Writer::EventCode& errCode,
-	const ::FTDI::Writer::Data& data)
+void OneLine::writerCallBack(const ::FTDI::EventCode& errCode,
+	const ::FTDI::Data& data)
 {
 	switch (errCode)
 	{
-		case ::FTDI::Writer::EventCode::NO_PERIOD_ERR:
-		{
-			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-			break;
-		}
-		case ::FTDI::Writer::EventCode::NO_DATA_ERR:
-		{
-			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-			break;
-		}
-		case ::FTDI::Writer::EventCode::FTDI_OPEN_ERR:
-		{
-			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
-			break;
-		}
-		case ::FTDI::Writer::EventCode::STOPPED:
+		case ::FTDI::EventCode::NO_PERIOD_ERR:
+		case ::FTDI::EventCode::WRITE_FOPEN_ERR:
+		case ::FTDI::EventCode::WRITE_STOPPED:
 		{
 			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 			break;
