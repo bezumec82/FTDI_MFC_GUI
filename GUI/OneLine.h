@@ -22,7 +22,7 @@ public:
 
 	public: /*--- Getters/Setters ---*/
 		// Opened file
-		const CString& getFile()
+		const CString getFile()
 		{
 			return m_parent_ref.m_ftdiWriter.getFileName();
 		}

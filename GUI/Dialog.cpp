@@ -27,9 +27,8 @@ BOOL Dialog::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-	/////////////////////
+
 	//Initialize captions
-	/////////////////////
 	for (int idx = 0; idx < NUM_OF_SEND_LINES; idx++)
 	{
 		( * m_oneLine_arr[idx] ).m_eBoxOpenedFPth.SetWindowTextW(L"<-select file");
