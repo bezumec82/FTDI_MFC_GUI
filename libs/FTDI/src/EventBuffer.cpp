@@ -2,13 +2,14 @@
 
 using namespace FTDI;
 
-EventBuffer::EventBuffer()
+void EventBuffer::doBuffer()
 {
 	auto work = [&]()
 	{
+		Events events;
+		m_isWorking.store(true);
 		while (!m_stop.load())
 		{
-			Events events;
 			{
 				::std::unique_lock<::std::mutex> lock(m_eventsLock);
 				events.swap(m_events);
@@ -25,15 +26,34 @@ EventBuffer::EventBuffer()
 			::std::this_thread::sleep_for(\
 				::std::chrono::milliseconds(BUFFER_DELAY_MS));
 		} //end while
+		m_isWorking.store(false);
+		::std::cout << "Event passing is stopped" << ::std::endl;
 	};
 
 	m_future = ::std::async(::std::launch::async, work);
 }
 
-EventBuffer::~EventBuffer()
+void EventBuffer::start()
+{
+	if (isWorking())
+	{
+		::std::cerr << "Repeated start" << ::std::endl;
+		return;
+	}
+	m_stop.store(false);
+	doBuffer();
+	::std::cout << "Event buffer is started" << ::std::endl;
+};
+
+void EventBuffer::stop()
 {
 	m_stop.store(true);
-	m_future.get();
+	{
+		::std::unique_lock<::std::mutex> lock(m_eventsLock);
+		while (!m_events.empty()) //clear queue
+			m_events.pop();
+	}
+	::std::cout << "Event buffer is stopped" << ::std::endl;
 }
 
 void EventBuffer::registerCallBack(::std::function <CallBack> call_back)
@@ -46,5 +66,6 @@ void EventBuffer::receiveEvent(const ::FTDI::EventCode& event,
 	const ::FTDI::Data& data)
 {
 	::std::unique_lock<::std::mutex> lock(m_eventsLock);
-	m_events.emplace(Event{ event, data });
+	if (!m_stop.load())
+		m_events.emplace(Event{ event, data });
 }

@@ -142,7 +142,7 @@ INT FtdiHandler::findFtdiDevices()
         return -1;
     }
 
-    if (mergeDevsList(nodes_tmp) == true)
+    if (mergeDevsList(nodes_tmp) == TRUE)
     {
         //Indirect access to the resources of other objects
         notifyAll(EventCode::DEV_LIST, m_devDescriptions);
@@ -297,7 +297,7 @@ INT FtdiHandler::sendData(::std::vector<char>& data)
     }
 
         ftdi_stat = FT_Write(m_selDev->second.ftHandle,\
-            data.data(), data.size(), &BytesWritten);
+            data.data(), DWORD(data.size()), &BytesWritten);
     if (ftdi_stat != FT_OK)
     {
         ::std::cerr << "Can't send data to the device " << m_selDev->first << '\n'
@@ -322,12 +322,12 @@ void FtdiHandler::stopSend()
 LONGLONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread)
 {
     LONG txQueueSize{ 0 };
-    ULONGLONG file_size{ 0 };
+    LONGLONG file_size{ 0 };
     LONGLONG sentBytes{ 0 };
     Buffer buffer;
     FT_STATUS ftdi_stat = FT_OTHER_ERROR;
     UINT bytesRead{ 0 };
-    UINT bytesToSend{ 0 };
+    ULONGLONG bytesToSend{ 0 };
     TimeStat time_stat;
 
     //Put task in wait-removable state
@@ -374,7 +374,7 @@ LONGLONG FtdiHandler::sendFile(CFile& file, ::std::atomic_bool& stop_from_thread
 
         bytesToSend = file_size > SEND_CHUNK ? SEND_CHUNK : file_size;
         buffer.resize(bytesToSend);
-        bytesRead = file.Read(buffer.data(), buffer.size());
+        bytesRead = file.Read(buffer.data(), UINT(buffer.size()));
         if (!bytesRead)
         {
             ::std::wcerr << "No data was read from the file : "

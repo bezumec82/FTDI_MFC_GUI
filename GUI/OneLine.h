@@ -48,21 +48,23 @@ public:
 		m_ftdiWriter{ ftdiHandler },
 		m_view(*this)
 	{
-#if(1)
-		m_ftdiWriter.registerCallBack(::std::bind(\
-			&OneLine::writerCallBack, this,
-			::std::placeholders::_1, ::std::placeholders::_2));
-#else
+		m_eventBuffer.start();
 		//register event receiver from FTDI
 		m_ftdiHandler_ref.registerCallBack(::std::bind(\
 			&::FTDI::EventBuffer::receiveEvent, &m_eventBuffer,
 			::std::placeholders::_1, ::std::placeholders::_2));
+		m_ftdiWriter.registerCallBack(::std::bind(\
+			& ::FTDI::EventBuffer::receiveEvent, &m_eventBuffer,
+			::std::placeholders::_1, ::std::placeholders::_2));
+
 		//register local event handler
 		m_eventBuffer.registerCallBack(::std::bind(\
 			&OneLine::writerCallBack, this,
 			::std::placeholders::_1, ::std::placeholders::_2));
-#endif
-
+	}
+	~OneLine()
+	{
+		m_eventBuffer.stop();
 	}
 
 public: /*--- Getters/Setters ---*/

@@ -27,7 +27,7 @@ class Dialog : public CDialogEx
 public: /*--- Aliases ---*/
 	using OneLinePtr = ::std::unique_ptr<OneLine>;
 public: /*--- Constructors ---*/
-	Dialog(CWnd* pParent = nullptr);	// standard constructor
+	Dialog(CWnd* pParent = nullptr); //standard constructor
 
 // Dialog Data
 #ifdef AFX_DESIGN_TIME
@@ -35,7 +35,7 @@ public: /*--- Constructors ---*/
 #endif
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
+	virtual void DoDataExchange(CDataExchange* pDX); //DDX/DDV support
 
 protected: /*--- Implementation ---*/
 	HICON m_hIcon;

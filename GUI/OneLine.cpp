@@ -23,9 +23,10 @@ void OneLine::writerCallBack(const ::FTDI::EventCode& errCode,
 {
 	switch (errCode)
 	{
-		case ::FTDI::EventCode::NO_PERIOD_ERR:
-		case ::FTDI::EventCode::WRITE_FOPEN_ERR:
-		case ::FTDI::EventCode::WRITE_STOPPED:
+		case ::FTDI::EventCode::NEW_DEV_SELECTED: //from 'FtdiHandler'
+		case ::FTDI::EventCode::NO_PERIOD_ERR: //from 'FtdiWriter'
+		case ::FTDI::EventCode::WRITE_FOPEN_ERR: //from 'FtdiWriter'
+		case ::FTDI::EventCode::WRITE_STOPPED: //from 'FtdiWriter'
 		{
 			m_chBoxStartStop.SetCheck(BST_UNCHECKED);
 			break;

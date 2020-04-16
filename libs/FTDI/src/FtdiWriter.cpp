@@ -40,28 +40,6 @@ INT Writer::openFile(CString& file_name, CFile& file)
 	return 0;
 }
 
-INT Writer::readFile()
-{
-	CFile file;
-	if (openFile(m_fileName, file) != 0) { return -1; }
-	m_fileDataBuf.clear();
-	m_fileDataBuf.resize(UINT(file.GetLength()));
-	UINT bytesRead = file.Read(\
-		m_fileDataBuf.data(), UINT(file.GetLength()));
-	if (bytesRead > 0)
-	{
-		::std::wcout << "Data from file '"
-			<< file.GetFilePath().GetString()
-			<< "' is stored." << ::std::endl;
-		return 0;
-	}
-	else
-	{
-		::std::cerr << "No data was read" << ::std::endl;
-		return -1;
-	}
-}
-
 void Writer::setPeriod(CString& period)
 {
 	try
@@ -77,12 +55,6 @@ void Writer::setPeriod(CString& period)
 	}
 }
 
-void Writer::stop()
-{
-	m_stopSend.store(true);
-	while (isSending());
-}
-
 void Writer::sendOnce()
 {
 	::std::cout << "Sending once." << ::std::endl;
@@ -94,7 +66,6 @@ void Writer::rewindFile(CFile& file)
 {
 	file.Seek(0, CFile::begin);
 }
-
 
 void Writer::doSend()
 {
@@ -127,12 +98,11 @@ void Writer::doSend()
 		}//end while - future destructor here
 		m_isSending.store(false);
 	fileOpenError:
-		notifyAll(EventCode::WRITE_STOPPED, Data{});
+		this->notifyAll(EventCode::WRITE_STOPPED, Data{});
 		::std::cout << "Data sending is stopped" << ::std::endl;
 		MessageBeep(MB_ABORTRETRYIGNORE);
 		//CFile closed here
 	};
-
 	m_future = ::std::async(std::launch::async, work);
 }
 
@@ -148,4 +118,11 @@ void Writer::start()
 	m_stopSend.store(false);
 	if (m_period == 0) { sendOnce(); }
 	doSend();
+}
+
+void Writer::stop()
+{
+	m_stopSend.store(true);
+	this->notifyAll(EventCode::WRITE_STOPPED, Data{});
+	while (isSending());
 }

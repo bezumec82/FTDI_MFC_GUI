@@ -85,21 +85,29 @@ namespace FTDI
     public: /*--- Aliases ---*/
         using Event = ::std::pair<EventCode, Data>;
         using Events = ::std::queue<Event>;
+    private: /*--- Implementation ---*/
+        void doBuffer();
+
     public:
-        EventBuffer();
-        ~EventBuffer();
+        EventBuffer() {}
         void registerCallBack(::std::function <CallBack>);
         CallBack receiveEvent;
-
+        void start();
+        void stop();
+        bool isWorking()
+        {
+            return m_isWorking.load();
+        }
 
     private:
-        UINT BUFFER_DELAY_MS = 10;
+        UINT BUFFER_DELAY_MS = 20;
         Events m_events;
         ::std::future<void> m_future;
         CallBacks m_callBacks;
         ::std::mutex m_callBacksLock;
         ::std::mutex m_eventsLock;
-        ::std::atomic_bool m_stop{ false };
+        ::std::atomic_bool m_stop{ true };
+        ::std::atomic_bool m_isWorking{ false };
     };
 
 
@@ -266,22 +274,25 @@ namespace FTDI
     public: /*--- Constructor ---*/
         Writer(FtdiHandler& ftdi_handler)
             : m_ftdiHandler_ref{ ftdi_handler }
-        {
-        }
+        { }
+
+
 
     private: /*--- Implementation ---*/
         void sendOnce();
         void doSend();
         INT openFile(CString&, CFile&);
         void rewindFile(CFile&);
+
+    private: /*--- Notification mechanism ---*/
         void notifyAll(const EventCode& event,
             const Data& data);
+    public: /*--- Notification mechanism ---*/
+        void registerCallBack(::std::function<CallBack>);
 
     public: /*--- Methods ---*/
-        INT readFile();
         void start();
         void stop();
-        void registerCallBack(::std::function<CallBack>);
 
     public: /*--- Getters/Setters ---*/
         bool isSending()
@@ -289,15 +300,6 @@ namespace FTDI
             return m_isSending.load();
         }
         void setPeriod(CString& period);
-        void setPeriod(int32_t period)
-        {
-            m_period = period;
-        }
-        int32_t getPeriod()
-        {
-            return m_period;
-        }
-
         void setFileName(CString fileName)
         {
             m_fileName = fileName;
@@ -312,11 +314,6 @@ namespace FTDI
         int32_t m_period{ -1 };
         ::std::future<void> m_future;
         CallBacks m_callBacks;
-
-    private: /*--- Variables ---*/
-        //read file once in buffer and send constantly
-        //currently unused
-        ::std::vector<char> m_fileDataBuf;
         CString m_fileName;
 
     private: /*--- Flags ---*/

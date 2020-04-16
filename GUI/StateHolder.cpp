@@ -43,9 +43,10 @@ int32_t StateHolder::openFile(CString file_path)
 
 INT StateHolder::readFile()
 {
-    ULONGLONG num_bytes = m_stateFile.GetLength();
-    ULONGLONG num_chars = num_bytes / sizeof(TCHAR);
-    UINT read_bytes = m_stateFile.Read(m_jsonData.GetBuffer(num_chars), num_bytes);
+    UINT num_bytes = UINT(m_stateFile.GetLength());
+    UINT num_chars = UINT(num_bytes / sizeof(TCHAR));
+    UINT read_bytes = m_stateFile.Read(\
+        m_jsonData.GetBuffer(num_chars), num_bytes);
     m_jsonData.ReleaseBuffer();
     if (read_bytes != num_bytes)
     {
@@ -87,7 +88,7 @@ void StateHolder::saveState()
 
     m_stateFile.Seek(CFile::begin, 0);
     m_stateFile.SetLength(0);
-    m_stateFile.Write(json_buffer.GetString(), json_buffer.GetSize());
+    m_stateFile.Write(json_buffer.GetString(), UINT(json_buffer.GetSize()));
     m_stateFile.Flush();
 }
 
